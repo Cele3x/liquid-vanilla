@@ -1,2 +1,2 @@
-# liquid-vanilla
-**Liquid Vanilla** (LV) is a web application for managing recipes
+# Liquid Vanilla
+**Liquid Vanilla** is a web application for managing recipes
