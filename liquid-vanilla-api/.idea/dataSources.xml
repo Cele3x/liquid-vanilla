@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourceManagerImpl" format="xml" multifile-model="true">
+    <data-source source="LOCAL" name="Rails liquid-vanilla-api: test" uuid="15dc18e4-f1e1-4141-a87a-34b32d28d3a1">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <imported>true</imported>
+      <remarks>$PROJECT_DIR$/config/database.yml</remarks>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://127.0.0.1:5432/liquid_vanilla_api_test</jdbc-url>
+    </data-source>
+    <data-source source="LOCAL" name="Rails liquid-vanilla-api: production" uuid="19f7beae-3886-4e76-8d0f-c33cc48e38d8">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <imported>true</imported>
+      <remarks>$PROJECT_DIR$/config/database.yml</remarks>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://127.0.0.1:5432/liquid_vanilla_api_production</jdbc-url>
+    </data-source>
+    <data-source source="LOCAL" name="Rails liquid-vanilla-api: development" uuid="62c5bcd3-39a5-4b0c-9062-bcaf39c250be">
+      <driver-ref>postgresql</driver-ref>
+      <synchronize>true</synchronize>
+      <imported>true</imported>
+      <remarks>$PROJECT_DIR$/config/database.yml</remarks>
+      <jdbc-driver>org.postgresql.Driver</jdbc-driver>
+      <jdbc-url>jdbc:postgresql://127.0.0.1:5432/liquid_vanilla_api_development</jdbc-url>
+    </data-source>
+  </component>
+</project>
