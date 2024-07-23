@@ -2,9 +2,9 @@ import pytest
 from pymongo import MongoClient
 from fastapi.testclient import TestClient
 
-from src.config import settings
-from src.main import app
-from src.database import get_db
+from backend.src.config import settings
+from backend.src.main import app
+from backend.src.database import get_db
 
 
 def get_test_db_client():

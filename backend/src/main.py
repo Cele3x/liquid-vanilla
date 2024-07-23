@@ -8,7 +8,7 @@ from recipes import routers as recipe_routers
 
 
 @asynccontextmanager
-async def lifespan(application: FastAPI):
+async def lifespan(_: FastAPI):
     await check_connection()
     yield
 

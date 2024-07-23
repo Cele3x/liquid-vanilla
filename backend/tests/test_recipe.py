@@ -1,7 +1,7 @@
 import pytest
 from bson import ObjectId
 from fastapi.testclient import TestClient
-from src.config import settings
+from backend.src.config import settings
 
 RECIPE_URL = f"{settings.BASE_URL}/recipes"
 
