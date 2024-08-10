@@ -13,7 +13,7 @@ async def check_connection():
     client = await get_client()
     try:
         conn = client.server_info()
-        print(f'Connected to MongoDB {conn.get("version")}')
+        print(f'Connected to MongoDB {conn.get("version")} on {settings.MONGO_URL}!')
     except pymongo.errors.ConnectionFailure as e:
         print(f'Could not connect to MongoDB: {e}')
     except Exception as e:
