@@ -8,7 +8,7 @@ RECIPE_URL = f"{settings.BASE_URL}/recipes"
 
 @pytest.fixture
 def valid_recipe():
-    return {"name": "Test Recipe", "description": "This is a test recipe"}
+    return {"title": "Test Recipe"}
 
 
 @pytest.fixture
@@ -36,11 +36,10 @@ class TestRecipe:
         """Tests for creating recipes."""
 
         @pytest.mark.parametrize("invalid_recipe, expected_detail", [
-            ({}, "name"),  # Empty recipe
-            ({"name": ""}, "name"),  # Missing name
-            ({"name": "X"}, "name"),  # Name too short
-            ({"name": "X" * 101}, "name"),  # Name too long
-            ({"name": "Test Recipe", "description": "X" * 257}, "description"),  # Description too long
+            ({}, "title"),  # Empty recipe
+            ({"title": ""}, "title"),  # Missing title
+            ({"title": "X"}, "title"),  # Title too short
+            ({"title": "X" * 101}, "title"),  # Title too long
         ])
         def test_create_invalid_recipe(self, client, invalid_recipe, expected_detail):
             """Test creating invalid recipes."""
@@ -61,7 +60,7 @@ class TestRecipe:
             """Test retrieving multiple recipes."""
             for i in range(3):
                 recipe = valid_recipe.copy()
-                recipe["name"] = f"Test Recipe {i + 1}"
+                recipe["title"] = f"Test Recipe {i + 1}"
                 client.post(RECIPE_URL, json=recipe)
 
             response = client.get(RECIPE_URL)
@@ -69,7 +68,7 @@ class TestRecipe:
             recipes = response.json()
             assert len(recipes) >= 3
             assert all(isinstance(recipe, dict) for recipe in recipes)
-            assert all(set(recipe.keys()) == {"id", "name", "description"} for recipe in recipes)
+            assert all(set(recipe.keys()) == {"id", "title"} for recipe in recipes)
 
         def test_get_single_recipe(self, client, valid_recipe):
             """Test retrieving a single recipe."""
@@ -89,8 +88,7 @@ class TestRecipe:
             recipe_id = create_response.json()
 
             updated_recipe = {
-                "name": "Updated Test Recipe",
-                "description": "This is an updated test recipe",
+                "title": "Updated Test Recipe",
             }
             update_response = client.put(f"{RECIPE_URL}/{recipe_id}", json=updated_recipe)
             assert update_response.status_code == 204
@@ -110,7 +108,7 @@ class TestRecipe:
             create_response = client.post(RECIPE_URL, json=valid_recipe)
             recipe_id = create_response.json()
 
-            invalid_update = {"name": ""}  # Empty name is invalid
+            invalid_update = {"title": ""}  # Empty title is invalid
             update_response = client.put(f"{RECIPE_URL}/{recipe_id}", json=invalid_update)
             assert update_response.status_code == 422
 

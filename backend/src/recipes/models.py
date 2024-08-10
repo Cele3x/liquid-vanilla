@@ -4,19 +4,17 @@ from pydantic import BaseModel, Field, ConfigDict
 
 class Recipe(BaseModel):
     id: Optional[str] = Field(alias="_id", default_factory=str)
-    name: str = Field(min_length=2, max_length=100)
-    description: Optional[str] = Field(default=None, max_length=256)
+    title: str = Field(min_length=2, max_length=100)
 
     model_config = ConfigDict(
         populate_by_name=True,
         json_schema_extra={
             "example": {
-                "name": "Spaghetti Carbonara",
-                "description": "A classic Italian pasta dish."
+                "title": "Spaghetti Carbonara",
             }
         }
     )
 
     # def __repr__(self):
     #     """Return a string representation of the Recipe instance."""
-    #     return f"Recipe(id={self.id}, name='{self.name}')"
+    #     return f"Recipe(id={self.id}, title='{self.title}')"
