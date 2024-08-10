@@ -68,10 +68,12 @@ class TestRecipe:
 
             response = client.get(RECIPE_URL)
             assert response.status_code == 200
-            recipes = response.json()
-            assert len(recipes) >= 3
-            assert all(isinstance(recipe, dict) for recipe in recipes)
-            assert all(set(recipe.keys()) == {"id", "title", "rating", "previewImageUrlTemplate"} for recipe in recipes)
+            result = response.json()
+            assert isinstance(result, dict)
+            assert len(result["recipes"]) >= 3
+            assert all(isinstance(recipe, dict) for recipe in result['recipes'])
+            assert all(set(recipe.keys()) == {"id", "title", "rating", "previewImageUrlTemplate"} for recipe in
+                       result['recipes'])
 
         def test_get_single_recipe(self, client, valid_recipe):
             """Test retrieving a single recipe."""
@@ -95,7 +97,8 @@ class TestRecipe:
             response = client.get(f"{RECIPE_URL}")
             assert response.status_code == 200
 
-            retrieved_recipes = response.json()
+            result = response.json()
+            retrieved_recipes = result["recipes"]
             assert len(retrieved_recipes) == 5
 
             # Check if the recipes are sorted by rating in descending order
@@ -109,6 +112,63 @@ class TestRecipe:
 
             # Optional: Print the ratings to visualize the sorting
             print("Ratings in order:", [recipe['rating'] for recipe in retrieved_recipes])
+
+        def test_get_recipes_with_pagination(self, client, valid_recipe):
+            """Test retrieving recipes with pagination."""
+            # Create 25 recipes
+            for i in range(25):
+                recipe = valid_recipe.copy()
+                recipe["title"] = f"Test Recipe {i + 1}"
+                recipe["rating"] = random.uniform(0.0, 5.0)
+                client.post(RECIPE_URL, json=recipe)
+
+            # Test first page
+            response = client.get(f"{RECIPE_URL}?page=1&page_size=10")
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["recipes"]) == 10
+            assert data["page"] == 1
+            assert data["page_size"] == 10
+            assert data["total"] >= 25
+            assert data["has_next"] is True
+            assert data["has_previous"] is False
+
+            # Test second page
+            response = client.get(f"{RECIPE_URL}?page=2&page_size=10")
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["recipes"]) == 10
+            assert data["page"] == 2
+            assert data["has_next"] is True
+            assert data["has_previous"] is True
+
+            # Test last page
+            response = client.get(f"{RECIPE_URL}?page=3&page_size=10")
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["recipes"]) == 5
+            assert data["page"] == 3
+            assert data["has_next"] is False
+            assert data["has_previous"] is True
+
+            # Test page size limit
+            response = client.get(f"{RECIPE_URL}?page=1&page_size=101")
+            assert response.status_code == 422
+
+            # Verify sorting
+            response = client.get(f"{RECIPE_URL}?page=1&page_size=25")
+            data = response.json()
+            recipes = data["recipes"]
+            for i in range(len(recipes) - 1):
+                assert recipes[i]['rating'] >= recipes[i + 1]['rating']
+
+            # Test with default values
+            response = client.get(f"{RECIPE_URL}")
+            assert response.status_code == 200
+            data = response.json()
+            assert len(data["recipes"]) == 20  # Default page size
+            assert data["page"] == 1
+            assert data["page_size"] == 20
 
     class TestUpdateRecipe:
         """Tests for updating recipes."""
