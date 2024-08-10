@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 
 class Recipe(BaseModel):
@@ -7,14 +7,15 @@ class Recipe(BaseModel):
     name: str = Field(min_length=2, max_length=100)
     description: Optional[str] = Field(default=None, max_length=256)
 
-    class Config:
-        populate_by_name = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        json_schema_extra={
             "example": {
                 "name": "Spaghetti Carbonara",
                 "description": "A classic Italian pasta dish."
             }
         }
+    )
 
     # def __repr__(self):
     #     """Return a string representation of the Recipe instance."""
