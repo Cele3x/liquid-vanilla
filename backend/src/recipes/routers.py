@@ -16,7 +16,7 @@ collection = "recipes"
 
 @router.get("/", status_code=status.HTTP_200_OK)
 async def get_recipes(db: AsyncIOMotorClient = Depends(get_db)):
-    recipes = db[collection].find()
+    recipes = db[collection].find().limit(20)
     return serialize_recipes(recipes)
 
 
