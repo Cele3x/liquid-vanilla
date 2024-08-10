@@ -8,7 +8,9 @@ RECIPE_URL = f"{settings.BASE_URL}/recipes"
 
 @pytest.fixture
 def valid_recipe():
-    return {"title": "Test Recipe"}
+    return {"title": "Test Recipe",
+            "rating": 4.5,
+            "previewImageUrlTemplate": "https://example.com/images/12345/<format>/image_description.jpg"}
 
 
 @pytest.fixture
@@ -68,7 +70,7 @@ class TestRecipe:
             recipes = response.json()
             assert len(recipes) >= 3
             assert all(isinstance(recipe, dict) for recipe in recipes)
-            assert all(set(recipe.keys()) == {"id", "title"} for recipe in recipes)
+            assert all(set(recipe.keys()) == {"id", "title", "rating", "previewImageUrlTemplate"} for recipe in recipes)
 
         def test_get_single_recipe(self, client, valid_recipe):
             """Test retrieving a single recipe."""
@@ -87,9 +89,8 @@ class TestRecipe:
             create_response = client.post(RECIPE_URL, json=valid_recipe)
             recipe_id = create_response.json()
 
-            updated_recipe = {
-                "title": "Updated Test Recipe",
-            }
+            updated_recipe = valid_recipe.copy()
+            updated_recipe["title"] = "Updated Test Recipe"
             update_response = client.put(f"{RECIPE_URL}/{recipe_id}", json=updated_recipe)
             assert update_response.status_code == 204
 

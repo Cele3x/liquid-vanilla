@@ -1,7 +1,9 @@
 def serialize_recipe(recipe) -> dict:
     return {
         "id": str(recipe.get("_id")),
-        "title": recipe.get("title")
+        "title": recipe.get("title"),
+        "rating": recipe.get("rating"),
+        "previewImageUrlTemplate": recipe.get("previewImageUrlTemplate"),
     }
 
 
