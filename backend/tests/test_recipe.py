@@ -1,6 +1,7 @@
 import pytest
 from bson import ObjectId
 from fastapi.testclient import TestClient
+import random
 from backend.src.config import settings
 
 RECIPE_URL = f"{settings.BASE_URL}/recipes"
@@ -80,6 +81,34 @@ class TestRecipe:
             response = client.get(f"{RECIPE_URL}/{recipe_id}")
             assert response.status_code == 200
             assert response.json() == {**valid_recipe, "id": recipe_id}
+
+        def test_get_sorted_recipes_by_rating(self, client, valid_recipe):
+            """Test retrieving recipes sorted by its rating as default (highest to lowest)."""
+            created_recipes = []
+            for i in range(5):
+                recipe = valid_recipe.copy()
+                recipe["title"] = f"Test Recipe {i + 1}"
+                recipe["rating"] = random.uniform(0.0, 5.0)  # Get a random rating for each recipe
+                response = client.post(RECIPE_URL, json=recipe)
+                created_recipes.append(response.json())
+
+            response = client.get(f"{RECIPE_URL}")
+            assert response.status_code == 200
+
+            retrieved_recipes = response.json()
+            assert len(retrieved_recipes) == 5
+
+            # Check if the recipes are sorted by rating in descending order
+            for i in range(len(retrieved_recipes) - 1):
+                assert retrieved_recipes[i]['rating'] >= retrieved_recipes[i + 1]['rating']
+
+            # Verify that all created recipes are in the response
+            created_ids = set(recipe_id for recipe_id in created_recipes)
+            retrieved_ids = set(recipe['id'] for recipe in retrieved_recipes)
+            assert created_ids == retrieved_ids
+
+            # Optional: Print the ratings to visualize the sorting
+            print("Ratings in order:", [recipe['rating'] for recipe in retrieved_recipes])
 
     class TestUpdateRecipe:
         """Tests for updating recipes."""
