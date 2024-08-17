@@ -9,9 +9,32 @@ RECIPE_URL = f"{settings.BASE_URL}/recipes"
 
 @pytest.fixture
 def valid_recipe():
-    return {"title": "Test Recipe",
-            "rating": 4.5,
-            "previewImageUrlTemplate": "https://example.com/images/12345/<format>/image_description.jpg"}
+    return {
+        "title": "Test Recipe",
+        "rating": 4.5,
+        "sourceUrl": "https://example.com/recipes/12345",
+        "previewImageUrlTemplate": "https://example.com/images/12345/<format>/image_description.jpg",
+        "additionalDescription": "A delicious test recipe",
+        "preparationTime": 15,
+        "restingTime": 5,
+        "source": "Test Source",
+        "sourceId": "TS12345",
+        "status": "active",
+        "cookingTime": 30,
+        "servings": 4,
+        "sourceRating": 4.7,
+        "subtitle": "Quick and easy",
+        "createdAt": "2023-06-01T12:00:00",
+        "sourceRatingVotes": 100,
+        "tags": ["test", "recipe", "easy"],
+        "difficulty": 2,
+        "sourceViewCount": 1000,
+        "totalTime": 50,
+        "userId": "user123",
+        "ingredientsText": "Ingredient 1, Ingredient 2, Ingredient 3",
+        "instructions": ["Step 1", "Step 2", "Step 3"],
+        "miscellaneousText": "Additional notes about the recipe"
+    }
 
 
 @pytest.fixture
@@ -72,8 +95,18 @@ class TestRecipe:
             assert isinstance(result, dict)
             assert len(result["recipes"]) >= 3
             assert all(isinstance(recipe, dict) for recipe in result['recipes'])
-            assert all(set(recipe.keys()) == {"id", "title", "rating", "previewImageUrlTemplate"} for recipe in
-                       result['recipes'])
+            expected_keys = {
+                "id", "title", "rating", "sourceUrl", "previewImageUrlTemplate",
+                "additionalDescription", "preparationTime", "restingTime", "source",
+                "sourceId", "status", "cookingTime", "servings", "sourceRating",
+                "subtitle", "createdAt", "sourceRatingVotes", "tags", "difficulty",
+                "sourceViewCount", "totalTime", "userId", "ingredientsText",
+                "instructions", "miscellaneousText"
+            }
+            # Optionally, print the actual keys to help debug
+            if not all(set(recipe.keys()) == expected_keys for recipe in result['recipes']):
+                print("Actual keys in first recipe:", set(result['recipes'][0].keys()))
+            assert all(set(recipe.keys()) == expected_keys for recipe in result['recipes'])
 
         def test_get_single_recipe(self, client, valid_recipe):
             """Test retrieving a single recipe."""
