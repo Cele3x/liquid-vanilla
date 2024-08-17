@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 import { recipeService } from '@/services/recipeService'
 
 interface Recipe {
@@ -14,7 +15,10 @@ const recipes = ref<Recipe[]>([])
 
 onMounted(async () => {
   try {
-    const data = await recipeService.getRecipes()
+    const route = useRoute()
+    const page = Number(route.query.page) || 1
+    const pageSize = Number(route.query.page_size) || 20
+    const data = await recipeService.getRecipes(page, pageSize)
     console.log('Fetched recipes:', data.recipes)
     // recipes.value = data.recipes
     recipes.value = data.recipes.map((recipe: Recipe) => ({
