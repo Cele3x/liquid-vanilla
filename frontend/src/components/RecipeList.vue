@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { onMounted, ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { recipeService } from '@/services/recipeService'
 
 interface Recipe {
@@ -12,24 +12,65 @@ interface Recipe {
   sourceUrl: string
 }
 
+interface PaginationData {
+  page: number
+  page_size: number
+  total: number
+  has_next: boolean
+  has_previous: boolean
+}
+
 const recipes = ref<Recipe[]>([])
+const paginationData = ref<PaginationData>({
+  page: 1,
+  page_size: 20,
+  total: 0,
+  has_next: false,
+  has_previous: false
+})
 
+const route = useRoute()
+const router = useRouter()
 
-onMounted(async () => {
+const currentPage = computed(() => Number(route.query.page) || 1)
+const pageSize = computed(() => Number(route.query.page_size) || 20)
+
+const fetchRecipes = async (page: number, pageSize: number) => {
   try {
-    const route = useRoute()
-    const page = Number(route.query.page) || 1
-    const pageSize = Number(route.query.page_size) || 20
     const data = await recipeService.getRecipes(page, pageSize)
     console.log('Fetched recipes:', data.recipes)
     recipes.value = data.recipes.map((recipe: Recipe) => ({
       ...recipe,
       defaultImageUrl: recipe.previewImageUrlTemplate.replace('<format>', 'crop-240x300')
     }))
+    paginationData.value = {
+      page: data.page,
+      page_size: data.page_size,
+      total: data.total,
+      has_next: data.has_next,
+      has_previous: data.has_previous
+    }
   } catch (error) {
     console.error('Failed to fetch recipes:', error)
   }
+}
+
+const goToPage = (page: number) => {
+  router.push({ query: { ...route.query, page: page.toString() } })
+}
+
+onMounted(() => {
+  fetchRecipes(currentPage.value, pageSize.value)
 })
+
+// Watch for changes in the route query parameters
+watch(
+  () => route.query,
+  () => {
+    fetchRecipes(currentPage.value, pageSize.value)
+  },
+  { deep: true }
+)
 </script>
 
 <template>
@@ -44,6 +85,23 @@ onMounted(async () => {
       </div>
     </div>
     <p v-else>Loading recipes...</p>
+
+    <!-- Pagination controls -->
+    <div class="pagination">
+      <button
+        :disabled="!paginationData.has_previous"
+        @click="goToPage(currentPage - 1)"
+      >
+        Previous
+      </button>
+      <span>Page {{ currentPage }} of {{ Math.ceil(paginationData.total / paginationData.page_size) }}</span>
+      <button
+        :disabled="!paginationData.has_next"
+        @click="goToPage(currentPage + 1)"
+      >
+        Next
+      </button>
+    </div>
   </div>
 </template>
 
