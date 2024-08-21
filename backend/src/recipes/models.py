@@ -4,14 +4,14 @@ from datetime import datetime
 
 
 class Ingredient(BaseModel):
-    ingredientId: str
-    unitId: str
-    amount: float
+    ingredientId: Optional[str] = None
+    unitId: Optional[str] = None
+    amount: Optional[float] = None
 
 
 class IngredientGroup(BaseModel):
-    header: Optional[str]
-    ingredients: List[Ingredient]
+    header: Optional[str] = None
+    ingredients: Optional[List[Ingredient]] = None
 
 
 class Recipe(BaseModel):
@@ -24,9 +24,9 @@ class Recipe(BaseModel):
     cookingTime: Optional[int] = None
     createdAt: Optional[datetime] = None
     difficulty: Optional[int] = None
-    ingredients: Optional[List[IngredientGroup]] = None
+    ingredientGroups: Optional[List[IngredientGroup]] = None
     ingredientsText: Optional[str] = None
-    instructions: Optional[List[str]] = None
+    instructions: Optional[str] = None
     miscellaneousText: Optional[str] = None
     preparationTime: Optional[int] = None
     restingTime: Optional[int] = None
@@ -56,7 +56,7 @@ class Recipe(BaseModel):
                 "createdAt": "2023-06-01T12:00:00Z",
                 "difficulty": 2,
                 "ingredientsText": "400g spaghetti, 200g pancetta, 4 eggs, 100g Pecorino cheese, Black pepper",
-                "instructions": ["Cook pasta", "Fry pancetta", "Mix eggs and cheese", "Combine all ingredients"],
+                "instructions": "Cook pasta\nFry pancetta \nMix eggs and cheese\nCombine all ingredients",
                 "preparationTime": 10,
                 "servings": 4,
                 "source": "Chefkoch",
@@ -64,8 +64,20 @@ class Recipe(BaseModel):
                 "sourceRatingVotes": 1000,
                 "status": "active",
                 "subtitle": "Quick and delicious",
-                "tags": ["Italian", "Pasta", "Quick"],
-                "totalTime": 30
+                "tags": ["6628c6369b0fefc37a4de90d", "6628c6369b0fefc37a4de90d"],
+                "ingredientGroups": [
+                    {
+                        "header": "Für das Gemüse:",
+                        "ingredients": [
+                            {"ingredientId": "6628c6429b0fefc37a4de945", "unitId": "6628c6289b0fefc37a4de8a6",
+                             "amount": 500},
+                            {"ingredientId": "6628c6289b0fefc37a4de8b1", "unitId": "6628c6289b0fefc37a4de8ab",
+                             "amount": 0}
+                        ]
+                    }
+                ],
+                "totalTime": 30,
+                "userId": "6624e2a193986e2790e3c69f",
             }
         }
     )

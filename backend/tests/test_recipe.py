@@ -26,13 +26,22 @@ def valid_recipe():
         "subtitle": "Quick and easy",
         "createdAt": "2023-06-01T12:00:00",
         "sourceRatingVotes": 100,
-        "tags": ["test", "recipe", "easy"],
+        "tags": ["6628c6369b0fefc37a4de90d", "6628c6369b0fefc37a4de90d"],
+        "ingredientGroups": [
+            {
+                "header": "Für das Gemüse:",
+                "ingredients": [
+                    {"ingredientId": "6628c6429b0fefc37a4de945", "unitId": "6628c6289b0fefc37a4de8a6", "amount": 500},
+                    {"ingredientId": "6628c6289b0fefc37a4de8b1", "unitId": "6628c6289b0fefc37a4de8ab", "amount": 0}
+                ]
+            }
+        ],
         "difficulty": 2,
         "sourceViewCount": 1000,
         "totalTime": 50,
-        "userId": "user123",
+        "userId": "6624e2a193986e2790e3c69f",
         "ingredientsText": "Ingredient 1, Ingredient 2, Ingredient 3",
-        "instructions": ["Step 1", "Step 2", "Step 3"],
+        "instructions": "Step 1\nStep 2\nStep 3",
         "miscellaneousText": "Additional notes about the recipe"
     }
 
@@ -79,6 +88,17 @@ class TestRecipe:
             assert response.status_code == 201
             assert ObjectId.is_valid(response.json())
 
+        def test_create_minimal_valid_recipe(self, client, valid_recipe):
+            """Test creating a recipe with minimal valid data."""
+            minimal_recipe = {
+                "title": valid_recipe["title"],
+                "ingredientGroups": valid_recipe["ingredientGroups"],
+                "instructions": valid_recipe["instructions"]
+            }
+            response = client.post(RECIPE_URL, json=minimal_recipe)
+            assert response.status_code == 201
+            assert ObjectId.is_valid(response.json())
+
     class TestGetRecipes:
         """Tests for retrieving recipes."""
 
@@ -101,7 +121,7 @@ class TestRecipe:
                 "sourceId", "status", "cookingTime", "servings", "sourceRating",
                 "subtitle", "createdAt", "sourceRatingVotes", "tags", "difficulty",
                 "sourceViewCount", "totalTime", "userId", "ingredientsText",
-                "instructions", "miscellaneousText"
+                "instructions", "miscellaneousText", "ingredientGroups"
             }
             # Optionally, print the actual keys to help debug
             if not all(set(recipe.keys()) == expected_keys for recipe in result['recipes']):

@@ -36,6 +36,7 @@ async def get_recipes(
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_recipe(recipe: Recipe, db: AsyncIOMotorClient = Depends(get_db)):
+    print(recipe)
     result = db[collection].insert_one(recipe.model_dump())
     if result.inserted_id:
         return str(result.inserted_id)
