@@ -5,7 +5,7 @@ from bson import ObjectId
 
 from .models import Recipe
 from .schemas import serialize_recipe, serialize_recipes
-from backend.src.database import get_db
+from database import get_db
 
 router = APIRouter(
     prefix="/recipes",
