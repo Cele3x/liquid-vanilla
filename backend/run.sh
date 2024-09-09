@@ -1,12 +1,23 @@
 #!/bin/bash
-# Change to the src directory
-cd "$(dirname "$0")/src" || exit
+
+NAME=liquid-vanilla-backend
+DIR=/var/www/liquid-vanilla/backend
+DIR_SRC=$DIR/src
+USER=jonathan
+WORKERS=3
+WORKER_CLASS=uvicorn.workers.UvicornWorker
+VENV=$DIR/.venv/bin/activate
+#BIND=unix:$DIR/run/gunicorn.sock
+BIND=0.0.0.0:8000
+
+# Change to the project source directory
+cd $DIR_SRC || exit
 
 # Activate the virtual environment
-source ../.venv/bin/activate
+source $VENV
 
 # Add the current directory and the src directory to the PYTHONPATH
-PYTHONPATH=$PYTHONPATH:$(pwd):$(pwd)/src
+PYTHONPATH=$PYTHONPATH:$DIR:$DIR_SRC
 export PYTHONPATH
 
 # Cleanup function
@@ -18,8 +29,14 @@ cleanup() {
 # Trap SIGTERM and call cleanup
 trap cleanup SIGTERM
 
-# Run the application using gunicorn
-gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 &
+# Run the application using Gunicorn
+gunicorn main:app \
+  --name $NAME \
+  --workers $WORKERS \
+  --worker-class $WORKER_CLASS \
+  --user=$USER \
+  --bind=$BIND \
+  &
 
 child=$!
 wait "$child"
