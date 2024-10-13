@@ -25,7 +25,6 @@ def drop_test_db():
 
 @pytest.fixture
 def client():
-    settings.MONGO_URL = 'mongodb://localhost:27017/'
     app.dependency_overrides[get_db] = get_test_db
 
     with TestClient(app) as test_client:

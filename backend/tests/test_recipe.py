@@ -1,6 +1,5 @@
 import pytest
 from bson import ObjectId
-from fastapi.testclient import TestClient
 import random
 from backend.src.config import settings
 
@@ -26,7 +25,7 @@ def valid_recipe():
         "subtitle": "Quick and easy",
         "createdAt": "2023-06-01T12:00:00",
         "sourceRatingVotes": 100,
-        "tags": ["6628c6369b0fefc37a4de90d", "6628c6369b0fefc37a4de90d"],
+        "tags": ["Vegetarisch", "Hauptspeise"],  # 6628c6289b0fefc37a4de8b8, 6628c62d9b0fefc37a4de8d9
         "ingredientGroups": [
             {
                 "header": "Für das Gemüse:",
@@ -44,11 +43,6 @@ def valid_recipe():
         "instructions": "Step 1\nStep 2\nStep 3",
         "miscellaneousText": "Additional notes about the recipe"
     }
-
-
-@pytest.fixture
-def client(client: TestClient):
-    return client
 
 
 class TestRecipe:

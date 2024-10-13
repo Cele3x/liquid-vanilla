@@ -21,7 +21,7 @@ class Settings:
     MONGO_PASSWORD: str = urllib.parse.quote_plus(os.getenv("MONGO_PASSWORD", ""))
     MONGO_DATABASE: str = os.getenv("MONGO_DATABASE", "RecipesDB")
     # MONGO_URL = "mongodb://%s:%s@%s:%s/%s" % (MONGO_USER, MONGO_PASSWORD, MONGO_HOST, MONGO_PORT, MONGO_DATABASE)
-    MONGO_URL = "mongodb://%s:%s/%s" % (MONGO_HOST, MONGO_PORT, MONGO_DATABASE)
+    MONGO_URL: str = os.getenv("MONGO_URL", "mongodb://%s:%s/%s" % (MONGO_HOST, MONGO_PORT, MONGO_DATABASE))
 
 
 settings = Settings()
