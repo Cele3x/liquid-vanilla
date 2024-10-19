@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onMounted, ref, onUnmounted } from 'vue'
 import { recipeService } from '@/services/recipeService'
 
 interface Recipe {
@@ -12,103 +11,81 @@ interface Recipe {
   sourceUrl: string
 }
 
-interface PaginationData {
-  page: number
-  page_size: number
-  total: number
-  has_next: boolean
-  has_previous: boolean
-}
-
 const recipes = ref<Recipe[]>([])
-const paginationData = ref<PaginationData>({
-  page: 1,
-  page_size: 20,
-  total: 0,
-  has_next: false,
-  has_previous: false
-})
+const page = ref(1)
+const pageSize = 20
+const loading = ref(false)
+const allLoaded = ref(false)
 
-const route = useRoute()
-const router = useRouter()
+const fetchRecipes = async () => {
+  if (loading.value || allLoaded.value) return
 
-const currentPage = computed(() => Number(route.query.page) || 1)
-const pageSize = computed(() => Number(route.query.page_size) || 20)
-
-const fetchRecipes = async (page: number, pageSize: number) => {
+  loading.value = true
   try {
-    const data = await recipeService.getRecipes(page, pageSize)
-    console.log('Fetched recipes:', data.recipes)
-    recipes.value = data.recipes.map((recipe: Recipe) => ({
+    const data = await recipeService.getRecipes(page.value, pageSize)
+    const newRecipes = data.recipes.map((recipe: Recipe) => ({
       ...recipe,
       defaultImageUrl: recipe.previewImageUrlTemplate.replace('<format>', 'crop-240x300')
     }))
-    paginationData.value = {
-      page: data.page,
-      page_size: data.page_size,
-      total: data.total,
-      has_next: data.has_next,
-      has_previous: data.has_previous
+    recipes.value.push(...newRecipes)
+    page.value++
+    if (newRecipes.length < pageSize) {
+      allLoaded.value = true
     }
   } catch (error) {
     console.error('Failed to fetch recipes:', error)
+  } finally {
+    loading.value = false
   }
 }
 
-const goToPage = (page: number) => {
-  router.push({ query: { ...route.query, page: page.toString() } })
+const handleScroll = () => {
+  const scrollPosition = window.innerHeight + window.scrollY
+  const bodyHeight = document.body.offsetHeight
+  // Adjust this value to start loading earlier
+  const scrollThreshold = bodyHeight - (window.innerHeight * 2)
+
+  if (scrollPosition >= scrollThreshold && !loading.value && !allLoaded.value) {
+    fetchRecipes()
+  }
 }
 
 onMounted(() => {
-  fetchRecipes(currentPage.value, pageSize.value)
+  fetchRecipes()
+  window.addEventListener('scroll', handleScroll)
 })
 
-// Watch for changes in the route query parameters
-watch(
-  () => route.query,
-  () => {
-    fetchRecipes(currentPage.value, pageSize.value)
-  },
-  { deep: true }
-)
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 </script>
 
 <template>
   <div class="container mx-auto px-4 py-8">
-    <div v-if="recipes.length" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      <div v-for="recipe in recipes" :key="recipe.id" class="recipe-item bg-dark-secondary rounded-lg overflow-hidden shadow-lg transition-all duration-300 ease-in-out hover:shadow-2xl">
-        <a :href="recipe.sourceUrl" target="_blank" rel="noopener noreferrer" class="block relative overflow-hidden aspect-w-4 aspect-h-3">
-          <img :src="recipe.defaultImageUrl" :alt="recipe.title" class="recipe-image object-cover w-full h-full transition-transform duration-300 ease-in-out rounded-t-lg" />
-        </a>
-        <div class="p-4">
-          <h3 class="recipe-title text-lg font-semibold text-dark-text truncate">{{ recipe.title }}</h3>
-          <div class="flex items-center mt-2">
-            <span class="text-yellow-400 mr-1">★</span>
-            <span class="text-dark-text">{{ recipe.rating.toFixed(1) }}</span>
+    <div v-if="recipes.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div v-for="recipe in recipes" :key="recipe.id" class="recipe-item relative overflow-hidden rounded-lg shadow-lg transition-all duration-300 ease-in-out hover:shadow-2xl">
+        <a :href="recipe.sourceUrl" target="_blank" rel="noopener noreferrer" class="block relative overflow-hidden aspect-w-16 aspect-h-9">
+          <img :src="recipe.defaultImageUrl" :alt="recipe.title" class="recipe-image object-cover w-full h-full transition-transform duration-300 ease-in-out" />
+          <div class="absolute inset-0 flex flex-col justify-end">
+            <div class="text-background p-4 transition-all duration-300 ease-in-out">
+              <h3 class="recipe-title text-lg font-semibold text-light truncate">{{ recipe.title }}</h3>
+              <div class="flex items-center mt-2">
+                <span class="star-icon mr-1">★</span>
+                <span class="text-light">{{ recipe.rating.toFixed(1) }}</span>
+              </div>
+            </div>
           </div>
-        </div>
+        </a>
       </div>
     </div>
-    <p v-else class="text-dark-text text-center text-xl mt-8">Loading recipes...</p>
-
-    <!-- Pagination controls -->
-    <div class="flex justify-center items-center space-x-4 mt-8">
-      <button
-        :disabled="!paginationData.has_previous"
-        @click="goToPage(currentPage - 1)"
-        class="px-4 py-2 bg-indigo-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors duration-300"
-      >
-        Previous
-      </button>
-      <span class="text-dark-text">Page {{ currentPage }} of {{ Math.ceil(paginationData.total / paginationData.page_size) }}</span>
-      <button
-        :disabled="!paginationData.has_next"
-        @click="goToPage(currentPage + 1)"
-        class="px-4 py-2 bg-indigo-600 text-white rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-indigo-700 transition-colors duration-300"
-      >
-        Next
-      </button>
+    <div v-if="loading" class="text-center mt-4">
+      <p class="text-light">Loading more recipes...</p>
     </div>
+    <div v-if="allLoaded" class="text-center mt-4">
+      <p class="text-light">All recipes loaded</p>
+    </div>
+    <!-- Add this invisible div to trigger earlier loading -->
+    <div class="h-screen"></div>
   </div>
 </template>
 
@@ -117,27 +94,41 @@ watch(
   transform: scale(1.1);
 }
 
+.text-background {
+  background: linear-gradient(to top,
+  rgba(0, 0, 0, 0.9) 0%,
+  rgba(0, 0, 0, 0.8) 20%,
+  rgba(0, 0, 0, 0.7) 40%,
+  rgba(0, 0, 0, 0.5) 60%,
+  rgba(0, 0, 0, 0.3) 80%,
+  rgba(0, 0, 0, 0) 100%
+  );
+  transition: all 0.3s ease-in-out;
+}
+
+.recipe-item:hover .recipe-title {
+  color: #ECDFCC;
+}
+
+.star-icon {
+  color: #FFD700;
+}
+
 @media (max-width: 640px) {
   .grid {
     grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 641px) and (max-width: 768px) {
+@media (min-width: 641px) and (max-width: 1024px) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (min-width: 769px) and (max-width: 1024px) {
-  .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
 @media (min-width: 1025px) {
   .grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 </style>

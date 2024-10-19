@@ -4,9 +4,9 @@ import Navigation from './components/Navigation.vue'
 </script>
 
 <template>
-  <div class="min-h-screen bg-dark-bg text-dark-text">
+  <div class="min-h-screen bg-primary text-light">
     <Navigation />
-    <main class="container mx-auto px-4 py-8">
+    <main class="container mx-auto">
       <RouterView />
     </main>
   </div>
