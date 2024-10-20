@@ -1,0 +1,75 @@
+name: Deploy to Ubuntu Server
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install SSH key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+
+      - name: Deploy to server
+        env:
+          HOST: ${{ secrets.SERVER_HOST }}
+          USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
+            set -e
+            cd /var/www/liquid-vanilla
+          
+            # Update repository
+            git fetch origin main
+            git reset --hard origin/main
+          
+            # Backend setup
+            cd backend
+            python3.12 -m venv .venv
+            source .venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+          
+            # Frontend setup
+            cd ../frontend
+            rm -rf node_modules package-lock.json
+            npm ci
+            npm run build
+          
+            # Restart services
+            sudo systemctl restart nginx
+            sudo supervisorctl restart liquid-vanilla
+          EOF
+
+      - name: Notify on success
+        if: success()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: Deployment to Ubuntu server successful!
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Notify on failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: Deployment to Ubuntu server failed!
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
