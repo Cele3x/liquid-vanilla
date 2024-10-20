@@ -50,7 +50,7 @@ jobs:
             # Frontend setup
             cd ../frontend
             rm -rf node_modules package-lock.json
-            npm ci
+            npm install
             npm run build
           
             # Restart services
