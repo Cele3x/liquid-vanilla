@@ -13,7 +13,13 @@ class Settings:
     PROJECT_DESCRIPTION: str = "A RESTful API for managing recipes"
 
     BASE_URL: str = "/api/v1"
-    ALLOWED_REQUEST_URLS: str = ["http://localhost", "http://localhost:8000", "http://localhost:5173"]
+    ALLOWED_REQUEST_URLS: list = [
+        "http://localhost",
+        "http://localhost:8000",
+        "http://localhost:5173",
+        "http://liquid-vanilla.com",
+        "http://192.168.178.78"
+    ]
 
     MONGO_HOST: str = os.getenv("MONGO_HOST", "localhost")
     MONGO_PORT: int = int(os.getenv("MONGO_PORT", 27017))
