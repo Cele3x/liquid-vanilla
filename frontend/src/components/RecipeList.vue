@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, onUnmounted } from 'vue'
 import { recipeService } from '@/services/recipeService'
-import placeholderImage from '@/assets/recipe.png'
+import placeholderImageDark from '@/assets/recipe-dark.png'
 
 interface Recipe {
   id: string
@@ -66,7 +66,7 @@ onUnmounted(() => {
     <div v-if="recipes.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       <div v-for="recipe in recipes" :key="recipe.id" class="recipe-item relative overflow-hidden rounded-lg shadow-lg transition-all duration-300 ease-in-out hover:shadow-2xl">
         <a :href="recipe.sourceUrl" target="_blank" rel="noopener noreferrer" class="block relative overflow-hidden aspect-w-16 aspect-h-9">
-          <img :src="recipe.defaultImageUrl || placeholderImage" :alt="recipe.title" class="recipe-image object-cover w-full h-full transition-transform duration-300 ease-in-out" />
+          <img :src="recipe.defaultImageUrl || placeholderImageDark" :alt="recipe.title" class="recipe-image object-cover w-full h-full transition-transform duration-300 ease-in-out" />
           <div class="absolute inset-0 flex flex-col justify-end">
             <div class="text-background p-4 transition-all duration-300 ease-in-out">
               <h3 class="recipe-title text-lg font-semibold text-light truncate">{{ recipe.title }}</h3>
