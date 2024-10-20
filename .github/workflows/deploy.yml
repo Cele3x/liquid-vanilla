@@ -54,6 +54,6 @@ jobs:
             npm run build
           
             # Restart services
-            sudo systemctl restart nginx
-            sudo supervisorctl restart liquid-vanilla
+            sudo /usr/sbin/service nginx restart
+            sudo /usr/bin/supervisorctl restart liquid-vanilla
           EOF
