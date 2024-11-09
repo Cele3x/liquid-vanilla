@@ -7,8 +7,8 @@ from bson import ObjectId
 
 from .models import Recipe
 from .schemas import serialize_recipe, serialize_recipes
-from backend.src.database import get_db
-from backend.src.utils import convert_object_ids
+from src.database import get_db
+from src.utils import convert_object_ids
 
 router = APIRouter(
     prefix="/recipes",
