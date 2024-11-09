@@ -1,7 +1,7 @@
-def serialize_tags(tags: list) -> list:
-    if not tags:
+def serialize_tags(tag_ids: list) -> list:
+    if not tag_ids:
         return []
-    return [str(tag) for tag in tags if tags]
+    return [str(tag_id) for tag_id in tag_ids if tag_ids]
 
 
 def serialize_ingredient(ingredient: dict) -> dict:
@@ -50,7 +50,7 @@ def serialize_recipe(recipe: dict) -> dict:
         "subtitle": recipe.get("subtitle"),
         "createdAt": recipe.get("createdAt"),
         "sourceRatingVotes": recipe.get("sourceRatingVotes"),
-        "tags": serialize_tags(recipe.get("tags")),
+        "tagIds": serialize_tags(recipe.get("tagIds")),
         "ingredientGroups": serialize_ingredient_groups(recipe.get("ingredientGroups")),
         "difficulty": recipe.get("difficulty"),
         "sourceViewCount": recipe.get("sourceViewCount"),

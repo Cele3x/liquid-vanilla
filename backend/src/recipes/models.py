@@ -1,21 +1,25 @@
-from typing import List, Optional
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Annotated, List, Optional
+from pydantic import BaseModel, BeforeValidator, Field, ConfigDict
 from datetime import datetime
+from bson import ObjectId
 
+PyObjectId = Annotated[str, BeforeValidator(str)]
 
 class Ingredient(BaseModel):
-    ingredientId: Optional[str] = None
-    unitId: Optional[str] = None
+    ingredientId: Optional[PyObjectId] = None
+    unitId: Optional[PyObjectId] = None
     amount: Optional[float] = None
-
 
 class IngredientGroup(BaseModel):
     header: Optional[str] = None
     ingredients: Optional[List[Ingredient]] = None
 
+# class Tag(BaseModel):
+#     id: Optional[str] = Field(alias="_id", default=None)
+#     name: str = Field(min_length=2, max_length=100)
 
 class Recipe(BaseModel):
-    id: Optional[str] = Field(alias="_id", default=None)
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     title: str = Field(min_length=2, max_length=100)
     rating: Optional[float] = Field(ge=0.0, le=5.0, default=None)
     sourceUrl: Optional[str] = Field(min_length=10, max_length=2000, default=None)
@@ -38,12 +42,14 @@ class Recipe(BaseModel):
     sourceViewCount: Optional[int] = None
     status: Optional[str] = None
     subtitle: Optional[str] = None
-    tags: Optional[List[str]] = None
+    tagIds: Optional[List[PyObjectId]] = None
     totalTime: Optional[int] = None
-    userId: Optional[str] = None
+    userId: Optional[PyObjectId] = None
 
     model_config = ConfigDict(
+        arbitrary_types_allowed=True,
         populate_by_name=True,
+        json_encoders={ObjectId: str},
         json_schema_extra={
             "example": {
                 "title": "Spaghetti Carbonara",
@@ -64,7 +70,7 @@ class Recipe(BaseModel):
                 "sourceRatingVotes": 1000,
                 "status": "active",
                 "subtitle": "Quick and delicious",
-                "tags": ["6628c6369b0fefc37a4de90d", "6628c6369b0fefc37a4de90d"],
+                "tagIds": ["6628c6369b0fefc37a4de90d", "6628c6369b0fefc37a4de90d"],
                 "ingredientGroups": [
                     {
                         "header": "Für das Gemüse:",

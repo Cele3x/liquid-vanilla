@@ -17,7 +17,7 @@ def valid_recipe():
         "preparationTime": 15,
         "restingTime": 5,
         "source": "Test Source",
-        "sourceId": "TS12345",
+        "sourceId": "858811191333549",
         "status": "active",
         "cookingTime": 30,
         "servings": 4,
@@ -25,7 +25,8 @@ def valid_recipe():
         "subtitle": "Quick and easy",
         "createdAt": "2023-06-01T12:00:00",
         "sourceRatingVotes": 100,
-        "tags": ["Vegetarisch", "Hauptspeise"],  # 6628c6289b0fefc37a4de8b8, 6628c62d9b0fefc37a4de8d9
+        # "tags": ["Vegetarisch", "Hauptspeise"],  # 6628c6289b0fefc37a4de8b8, 6628c62d9b0fefc37a4de8d9
+        "tagIds": ["6628c6289b0fefc37a4de8b8", "6628c62d9b0fefc37a4de8d9"],  # "Vegetarisch", "Hauptspeise"
         "ingredientGroups": [
             {
                 "header": "Für das Gemüse:",
@@ -113,7 +114,7 @@ class TestRecipe:
                 "id", "title", "rating", "sourceUrl", "previewImageUrlTemplate",
                 "additionalDescription", "preparationTime", "restingTime", "source",
                 "sourceId", "status", "cookingTime", "servings", "sourceRating",
-                "subtitle", "createdAt", "sourceRatingVotes", "tags", "difficulty",
+                "subtitle", "createdAt", "sourceRatingVotes", "tagIds", "difficulty",
                 "sourceViewCount", "totalTime", "userId", "ingredientsText",
                 "instructions", "miscellaneousText", "ingredientGroups"
             }
@@ -216,6 +217,57 @@ class TestRecipe:
             assert len(data["recipes"]) == 20  # Default page size
             assert data["page"] == 1
             assert data["page_size"] == 20
+
+        def test_filter_recipes_by_tags(self, client, valid_recipe):
+            """Test filtering recipes by tags."""
+            # Create tags
+            tag1 = "6628c6289b0fefc37a4de8b6"
+            tag2 = "6628c6289b0fefc37a4de8b7"
+
+            # Create recipes with different tags
+            recipes = [
+                {**valid_recipe, "title": "Recipe with Tag1", "tagIds": [tag1]},
+                {**valid_recipe, "title": "Recipe with Tag2", "tagIds": [tag2]},
+                {**valid_recipe, "title": "Recipe with Both Tags", "tagIds": [tag1, tag2]},
+                {**valid_recipe, "title": "Recipe with No Tags", "tagIds": []}
+            ]
+
+            for recipe in recipes:
+                response = client.post(RECIPE_URL, json=recipe)
+                assert response.status_code == 201
+                print(f"Created recipe response: {response.status_code}, {response.json()}")
+
+            # Test filtering by tag1
+            response = client.get(RECIPE_URL, params={"tags": [tag1]})
+            print(f"Filter by tag1 response: {response.status_code}, {response.json()}")
+            assert response.status_code == 200
+            result = response.json()
+            assert len(result["recipes"]) == 2
+            assert all(tag1 in recipe["tagIds"] for recipe in result["recipes"])
+
+            # Test filtering by tag2
+            response = client.get(RECIPE_URL, params={"tags": [tag2]})
+            print(f"Filter by tag2 response: {response.status_code}, {response.json()}")
+            assert response.status_code == 200
+            result = response.json()
+            assert len(result["recipes"]) == 2
+            assert all(tag2 in recipe["tagIds"] for recipe in result["recipes"])
+
+            # Test filtering by both tags
+            response = client.get(RECIPE_URL, params={"tags": [tag1, tag2]})
+            print(f"Filter by both tags response: {response.status_code}, {response.json()}")
+            assert response.status_code == 200
+            result = response.json()
+            assert len(result["recipes"]) == 1
+            assert all(tag in result["recipes"][0]["tagIds"] for tag in [tag1, tag2])
+
+            # Test filtering by a non-existent tag
+            non_existent_tag = "6628c6289b0fefc37a4de8b8"
+            response = client.get(RECIPE_URL, params={"tags": [non_existent_tag]})
+            print(f"Filter by non-existent tag response: {response.status_code}, {response.json()}")
+            assert response.status_code == 200
+            result = response.json()
+            assert len(result["recipes"]) == 0
 
     class TestUpdateRecipe:
         """Tests for updating recipes."""

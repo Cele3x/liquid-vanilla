@@ -17,8 +17,8 @@ class Settings:
         "http://localhost",
         "http://localhost:8000",
         "http://localhost:5173",
-        "http://liquid-vanilla.com",
-        "http://192.168.178.78"
+        "http://192.168.178.78",
+        "https://liquid-vanilla.com",
     ]
 
     MONGO_HOST: str = os.getenv("MONGO_HOST", "localhost")
