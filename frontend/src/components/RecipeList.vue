@@ -7,7 +7,7 @@ interface Recipe {
   id: string
   title: string
   rating: number
-  votes: number // TODO
+  sourceRatingVotes: number // TODO
   previewImageUrlTemplate: string
   defaultImageUrl: string
   sourceUrl: string
@@ -126,7 +126,7 @@ onUnmounted(() => {
               </div>
               <span class="text-[8px]">◆</span>
               <span class="font-montserrat text-xs font-medium tracking-wider">
-                {{ recipe.votes || 0 }} VOTES
+                {{ recipe.sourceRatingVotes || 0 }} VOTES
               </span>
             </div>
           </div>
