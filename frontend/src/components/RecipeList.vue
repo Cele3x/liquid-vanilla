@@ -7,9 +7,11 @@ interface Recipe {
   id: string
   title: string
   rating: number
+  votes: number // TODO
   previewImageUrlTemplate: string
   defaultImageUrl: string
   sourceUrl: string
+  tags: string[] // TODO
 }
 
 const recipes = ref<Recipe[]>([])
@@ -26,7 +28,8 @@ const fetchRecipes = async () => {
     const data = await recipeService.getRecipes(page.value, pageSize)
     const newRecipes = data.recipes.map((recipe: Recipe) => ({
       ...recipe,
-      defaultImageUrl: recipe.previewImageUrlTemplate.replace('<format>', 'crop-240x300')
+      defaultImageUrl: recipe.previewImageUrlTemplate.replace('<format>', 'crop-360x240')
+      // defaultImageUrl: recipe.previewImageUrlTemplate.replace('<format>', 'crop-240x300')
     }))
     recipes.value.push(...newRecipes)
     page.value++
@@ -44,7 +47,7 @@ const handleScroll = () => {
   const scrollPosition = window.innerHeight + window.scrollY
   const bodyHeight = document.body.offsetHeight
   // Adjust this value to start loading earlier
-  const scrollThreshold = bodyHeight - (window.innerHeight * 2)
+  const scrollThreshold = bodyHeight - window.innerHeight * 2
 
   if (scrollPosition >= scrollThreshold && !loading.value && !allLoaded.value) {
     fetchRecipes()
@@ -63,17 +66,68 @@ onUnmounted(() => {
 
 <template>
   <div class="container mx-auto px-4 py-8">
-    <div v-if="recipes.length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-      <div v-for="recipe in recipes" :key="recipe.id" class="recipe-item relative overflow-hidden rounded-lg shadow-lg transition-all duration-300 ease-in-out hover:shadow-2xl">
-        <a :href="recipe.sourceUrl" target="_blank" rel="noopener noreferrer" class="block relative overflow-hidden aspect-w-16 aspect-h-9">
-          <img :src="recipe.defaultImageUrl || placeholderImageDark" :alt="recipe.title" class="recipe-image object-cover w-full h-full transition-transform duration-300 ease-in-out" />
-          <div class="absolute inset-0 flex flex-col justify-end">
-            <div class="text-background p-4 transition-all duration-300 ease-in-out">
-              <h3 class="recipe-title text-lg font-semibold text-light truncate">{{ recipe.title }}</h3>
-              <div class="flex items-center mt-2">
-                <span class="star-icon mr-1">★</span>
-                <span class="text-light">{{ recipe.rating.toFixed(1) }}</span>
+    <div
+      v-if="recipes.length"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+    >
+      <div
+        v-for="recipe in recipes"
+        :key="recipe.id"
+        class="relative overflow-hidden shadow-lg transition-all duration-300 ease-in-out hover:shadow-2xl"
+      >
+        <a
+          :href="recipe.sourceUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="block relative recipe-item"
+        >
+          <!-- Recipe Image -->
+          <div class="relative overflow-hidden aspect-w-16 aspect-h-9">
+            <img
+              :src="recipe.defaultImageUrl || placeholderImageDark"
+              :alt="recipe.title"
+              class="recipe-image object-cover w-full h-full transition-transform duration-300 ease-in-out"
+            />
+          </div>
+
+          <!-- Recipe Subsection -->
+          <div class="p-4">
+
+            <!-- Recipe Tags -->
+            <div
+              v-if="recipe.tags?.length"
+              class="flex items-center justify-center flex-wrap gap-3 mb-3"
+            >
+              <span
+                v-for="tag in recipe.tags"
+                :key="tag"
+                class="text-gold text-xs font-montserrat font-medium tracking-wider hover:text-gold-hover transition-colors duration-200"
+              >
+                {{ tag.toUpperCase() }}
+              </span>
+              <span v-if="recipe.tags.length > 1" class="text-gold text-[8px]">◆</span>
+            </div>
+
+            <!-- Recipe Title -->
+            <h3
+              class="text-light font-montserrat text-lg font-normal tracking-wide text-center mb-3"
+            >
+              {{ recipe.title.toUpperCase() }}
+            </h3>
+
+            <!-- Recipe Rating -->
+            <div class="recipe-rating flex items-center justify-center gap-3 text-gold">
+              <div class="tracking-wider text-sm flex items-center gap-2">
+                <div class="flex">
+                  <span v-for="n in Math.floor(recipe.rating)" :key="n">★</span>
+                  <span v-if="recipe.rating % 1 >= 0.5" class="opacity-40">★</span>
+                </div>
+                <span class="font-montserrat text-xs">{{ recipe.rating.toFixed(1) }}</span>
               </div>
+              <span class="text-[8px]">◆</span>
+              <span class="font-montserrat text-xs font-medium tracking-wider">
+                {{ recipe.votes || 0 }} VOTES
+              </span>
             </div>
           </div>
         </a>
@@ -90,29 +144,11 @@ onUnmounted(() => {
   </div>
 </template>
 
-<style scoped>
+<style lang="scss" scoped>
 .recipe-item:hover .recipe-image {
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
-
-.text-background {
-  background: linear-gradient(to top,
-  rgba(0, 0, 0, 0.9) 0%,
-  rgba(0, 0, 0, 0.8) 20%,
-  rgba(0, 0, 0, 0.7) 40%,
-  rgba(0, 0, 0, 0.5) 60%,
-  rgba(0, 0, 0, 0.3) 80%,
-  rgba(0, 0, 0, 0) 100%
-  );
-  transition: all 0.3s ease-in-out;
+.recipe-rating:hover {
+  @extend .text-gold-hover !optional;  // NOT YET WORKING
 }
-
-.recipe-item:hover .recipe-title {
-  color: #ECDFCC;
-}
-
-.star-icon {
-  color: #FFD700;
-}
-
 </style>

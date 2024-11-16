@@ -6,12 +6,27 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        // 'sans': ['"Raleway"', 'sans-serif'],
+        'sans': ['montserrat', 'sans-serif'],
+        'raleway': ['"Raleway"', 'sans-serif'],
+        'playfair': ['"Playfair Display"', 'serif'],
+        'montserrat': ['Montserrat', 'sans-serif'],
+      },
       colors: {
-        'primary': '#1E201E',
+        'primary': '#111111',
         'secondary': '#3C3D37',
-        'accent': '#697565',
+        'accent': '#c8c177',
         'light': '#ECDFCC',
-      }
+        'gold': '#b8860b',
+        'gold-hover': '#daa520',
+      },
+      opacity: {
+        '85': '0.85',
+      },
+      brightness: {
+        '95': '.95',
+      },
     },
   },
   plugins: [],
