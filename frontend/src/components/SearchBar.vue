@@ -14,7 +14,7 @@ const recipeStore = useRecipeStore()
 const searchQuery = ref('')
 
 // Watch for changes in searchQuery and update store after a delay (debounce)
-let timeout: NodeJS.Timeout
+let timeout: ReturnType<typeof setTimeout>
 watch(searchQuery, (newQuery) => {
   clearTimeout(timeout)
   timeout = setTimeout(() => {
