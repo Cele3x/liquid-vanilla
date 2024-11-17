@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { recipeService } from '@/services/recipeService'
+import { onUnmounted, ref, watch } from 'vue'
+import { useRecipeStore } from '@/stores/recipeStore'
 
 const props = defineProps<{
   isVisible: boolean
@@ -10,14 +10,27 @@ const emit = defineEmits<{
   (e: 'update:isVisible', value: boolean): void
 }>()
 
+const recipeStore = useRecipeStore()
 const searchQuery = ref('')
+
+// Watch for changes in searchQuery and update store after a delay (debounce)
+let timeout: NodeJS.Timeout
+watch(searchQuery, (newQuery) => {
+  clearTimeout(timeout)
+  timeout = setTimeout(() => {
+    if (newQuery.trim()) {
+      recipeStore.setSearchQuery(newQuery.trim())
+    } else {
+      recipeStore.resetStore()
+      recipeStore.fetchRecipes()
+    }
+  }, 300) // 300ms delay
+})
 
 const handleSearch = async () => {
   if (searchQuery.value.trim()) {
     try {
-      const results = await recipeService.searchRecipes(searchQuery.value.trim())
-      console.log('Search results:', results)
-      // Handle the search results
+      recipeStore.setSearchQuery(searchQuery.value.trim())
     } catch (error) {
       console.error('Failed to search recipes:', error)
     }
@@ -32,8 +45,15 @@ const handleSearchBlur = () => {
 
 const clearSearch = () => {
   searchQuery.value = ''
+  recipeStore.resetStore()
+  recipeStore.fetchRecipes()
   document.getElementById('search')?.focus()
 }
+
+// Clean up timeout on component unmount
+onUnmounted(() => {
+  clearTimeout(timeout)
+})
 </script>
 
 <template>

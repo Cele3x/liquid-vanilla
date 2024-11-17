@@ -1,60 +1,25 @@
 <script setup lang="ts">
-import { onMounted, ref, onUnmounted } from 'vue'
-import { recipeService } from '@/services/recipeService'
+import { onMounted, onUnmounted } from 'vue'
+import { useRecipeStore } from '@/stores/recipeStore'
+import { storeToRefs } from 'pinia'
 import placeholderImageDark from '@/assets/recipe-dark.png'
 
-interface Recipe {
-  id: string
-  title: string
-  rating: number
-  sourceRatingVotes: number
-  previewImageUrlTemplate: string
-  defaultImageUrl: string
-  sourceUrl: string
-  tags: string[] // TODO
-}
-
-const recipes = ref<Recipe[]>([])
-const page = ref(1)
-const pageSize = 20
-const loading = ref(false)
-const allLoaded = ref(false)
-
-const fetchRecipes = async () => {
-  if (loading.value || allLoaded.value) return
-
-  loading.value = true
-  try {
-    const data = await recipeService.getRecipes(page.value, pageSize)
-    const newRecipes = data.recipes.map((recipe: Recipe) => ({
-      ...recipe,
-      defaultImageUrl: recipe.previewImageUrlTemplate.replace('<format>', 'crop-360x240')
-    }))
-    recipes.value.push(...newRecipes)
-    page.value++
-    if (newRecipes.length < pageSize) {
-      allLoaded.value = true
-    }
-  } catch (error) {
-    console.error('Failed to fetch recipes:', error)
-  } finally {
-    loading.value = false
-  }
-}
+const recipeStore = useRecipeStore()
+// Using storeToRefs to maintain reactivity
+const { recipes, loading, allLoaded } = storeToRefs(recipeStore)
 
 const handleScroll = () => {
   const scrollPosition = window.innerHeight + window.scrollY
   const bodyHeight = document.body.offsetHeight
-  // Adjust this value to start loading earlier
   const scrollThreshold = bodyHeight - window.innerHeight * 2
 
   if (scrollPosition >= scrollThreshold && !loading.value && !allLoaded.value) {
-    fetchRecipes()
+    recipeStore.fetchRecipes()
   }
 }
 
 onMounted(() => {
-  fetchRecipes()
+  recipeStore.fetchRecipes()
   window.addEventListener('scroll', handleScroll)
 })
 
@@ -91,7 +56,6 @@ onUnmounted(() => {
 
           <!-- Recipe Subsection -->
           <div class="p-4">
-
             <!-- Recipe Tags -->
             <div
               v-if="recipe.tags?.length"
@@ -108,9 +72,7 @@ onUnmounted(() => {
             </div>
 
             <!-- Recipe Title -->
-            <h3
-              class="text-light font-raleway text-lg font-normal tracking-wide text-center mb-3"
-            >
+            <h3 class="text-light font-raleway text-lg font-normal tracking-wide text-center mb-3">
               {{ recipe.title.toUpperCase() }}
             </h3>
 
@@ -138,7 +100,6 @@ onUnmounted(() => {
     <div v-if="allLoaded" class="text-center mt-4">
       <p class="text-light">All recipes loaded</p>
     </div>
-    <!-- Add this invisible div to trigger earlier loading -->
     <div class="h-screen"></div>
   </div>
 </template>
@@ -147,7 +108,8 @@ onUnmounted(() => {
 .recipe-item:hover .recipe-image {
   transform: scale(1.05);
 }
+
 .recipe-rating:hover {
-  @extend .text-gold-hover !optional;  // NOT YET WORKING
+  @extend .text-gold-hover !optional;
 }
 </style>
