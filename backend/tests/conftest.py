@@ -6,20 +6,19 @@ from backend.src.config import settings
 from backend.src.main import app
 from backend.src.database import get_db
 
-
 def get_test_db_client():
     return MongoClient(settings.MONGO_URL)
 
 
 async def get_test_db():
     test_db_client = get_test_db_client()
-    test_db = test_db_client.get_database("testRecipesDB")
+    test_db = test_db_client.get_database("testRecipeDB")
     yield test_db
 
 
 def drop_test_db():
     test_db_client = get_test_db_client()
-    test_db_client.drop_database("testRecipesDB")
+    test_db_client.drop_database("testRecipeDB")
     test_db_client.close()
 
 

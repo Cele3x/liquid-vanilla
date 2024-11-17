@@ -17,7 +17,7 @@ def valid_recipe():
         "preparationTime": 15,
         "restingTime": 5,
         "source": "Test Source",
-        "sourceId": "858811191333549",
+        "sourceId": str(random.randint(1, 1000000)),  # Ensure unique sourceId
         "status": "active",
         "cookingTime": 30,
         "servings": 4,
@@ -320,3 +320,21 @@ class TestRecipe:
             nonexistent_id = str(ObjectId())
             response = client.delete(f"{RECIPE_URL}/{nonexistent_id}")
             assert response.status_code == 404
+
+    class TestSearchRecipe:
+        """Tests for searching recipes."""
+
+        def test_search_recipe_by_title(self, client, valid_recipe):
+            """Test searching for a recipe by title."""
+            # Create a recipe
+            recipe = valid_recipe.copy()
+            recipe["title"] = "Unique Test Recipe"
+            create_response = client.post(RECIPE_URL, json=recipe)
+            assert create_response.status_code == 201
+
+            # Search for the recipe by title
+            search_response = client.get(f"{RECIPE_URL}?search=Unique Test Recipe")
+            assert search_response.status_code == 200
+            result = search_response.json()
+            assert len(result["recipes"]) == 1
+            assert result["recipes"][0]["title"] == "Unique Test Recipe"

@@ -3,12 +3,13 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from motor.motor_asyncio import AsyncIOMotorClient
 from starlette import status
-from bson import ObjectId
+from bson import ObjectId, errors as bson_errors
 
 from .models import Recipe
 from .schemas import serialize_recipe, serialize_recipes
 from src.database import get_db
 from src.utils import convert_object_ids
+
 
 router = APIRouter(
     prefix="/recipes",
@@ -26,7 +27,11 @@ async def get_recipes(
             None,
             description="List of tag IDs to filter recipes",
             example=["507f1f77bcf86cd799439011"]
-        )
+        ),
+        search: Optional[str] = Query(
+            None,
+            description="Search text to filter recipes by title"
+        ),
 ) -> Dict[str, Any]:
     """
     Retrieve paginated recipes with optional tag filtering.
@@ -35,6 +40,7 @@ async def get_recipes(
     @param page: Page number (starting from 1)
     @param page_size: Number of items per page
     @param tags: Optional list of tag IDs to filter recipes
+    @param search: Optional text to search for
     @return: Dictionary containing recipes and pagination info
     @raise HTTPException: If invalid tag IDs are provided
     """
@@ -51,7 +57,11 @@ async def get_recipes(
                 detail=f"Invalid tag ID format: {str(e)}"
             )
 
+    if search:
+        query["title"] = {"$regex": search, "$options": "i"}
+
     recipes = db[collection].find(query).skip(skip).limit(page_size).sort("rating", -1)
+    print(f"db[${collection}].find({query}).skip({skip}).limit({page_size}).sort('rating', -1)")
     total = db[collection].count_documents(query)
 
     return {
