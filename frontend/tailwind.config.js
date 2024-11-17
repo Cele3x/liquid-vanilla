@@ -7,19 +7,19 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // 'sans': ['"Raleway"', 'sans-serif'],
         'sans': ['montserrat', 'sans-serif'],
-        'raleway': ['"Raleway"', 'sans-serif'],
-        'playfair': ['"Playfair Display"', 'serif'],
+        'playfair': ['Playfair Display', 'serif'],
         'montserrat': ['Montserrat', 'sans-serif'],
+        'lato': ['Lato', 'sans-serif'],
+        'raleway': ['Raleway', 'sans-serif'],
       },
       colors: {
         'primary': '#111111',
         'secondary': '#3C3D37',
-        'accent': '#c8c177',
+        'accent': '#C8C177',
         'light': '#ECDFCC',
-        'gold': '#b8860b',
-        'gold-hover': '#daa520',
+        'gold': '#B8860B',
+        'gold-hover': '#DAA520',
       },
       opacity: {
         '85': '0.85',

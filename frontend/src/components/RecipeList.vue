@@ -7,7 +7,7 @@ interface Recipe {
   id: string
   title: string
   rating: number
-  sourceRatingVotes: number // TODO
+  sourceRatingVotes: number
   previewImageUrlTemplate: string
   defaultImageUrl: string
   sourceUrl: string
@@ -29,7 +29,6 @@ const fetchRecipes = async () => {
     const newRecipes = data.recipes.map((recipe: Recipe) => ({
       ...recipe,
       defaultImageUrl: recipe.previewImageUrlTemplate.replace('<format>', 'crop-360x240')
-      // defaultImageUrl: recipe.previewImageUrlTemplate.replace('<format>', 'crop-240x300')
     }))
     recipes.value.push(...newRecipes)
     page.value++
@@ -110,7 +109,7 @@ onUnmounted(() => {
 
             <!-- Recipe Title -->
             <h3
-              class="text-light font-montserrat text-lg font-normal tracking-wide text-center mb-3"
+              class="text-light font-raleway text-lg font-normal tracking-wide text-center mb-3"
             >
               {{ recipe.title.toUpperCase() }}
             </h3>

@@ -11,7 +11,12 @@ export const recipeService = {
   async getRecipe(id: string) {
     const response = await api.get(`/recipes/${id}`)
     return response.data
-  }
+  },
 
-  // Add more methods for other API endpoints
+  async searchRecipes(query: string) {
+    const response = await api.get('/recipes/', {
+      params: { search: query }
+    })
+    return response.data
+  }
 }
