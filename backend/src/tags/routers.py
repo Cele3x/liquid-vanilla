@@ -19,7 +19,7 @@ async def get_tags(db: AsyncIOMotorClient = Depends(get_db)) -> List[Dict[str, A
     @param db: Database connection
     @return: List of tags
     """
-    tags = db[collection].find()
+    tags = db[collection].find().sort({ "usageCount": -1 })
     return serialize_tags(tags)
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
