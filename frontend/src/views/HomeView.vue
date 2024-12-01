@@ -12,7 +12,6 @@ const router = useRouter()
 
 onMounted(async () => {
   tagStore.fetchTags()
-  // recipeStore.fetchRecipes()
 })
 
 const handleClick = (tagId: String) => {
@@ -38,6 +37,9 @@ const handleClick = (tagId: String) => {
           />
           <p class="text-center text-lg">{{ tag.name }}</p>
         </div>
+      </div>
+      <div v-if="loading" class="text-center mt-4">
+        <p class="text-light">Loading tags...</p>
       </div>
     </section>
   </main>
