@@ -13,14 +13,15 @@ interface Recipe {
   tags: string[]
 }
 
-export const useRecipeStore = defineStore('recipes', {
+export const useRecipeStore = defineStore('recipe', {
   state: () => ({
     recipes: [] as Recipe[],
     page: 1,
     pageSize: 20,
     loading: false,
     allLoaded: false,
-    searchQuery: ''
+    searchQuery: '',
+    tagFilter: [] as string[]
   }),
 
   actions: {
@@ -29,7 +30,7 @@ export const useRecipeStore = defineStore('recipes', {
 
       this.loading = true
       try {
-        const data = await recipeService.getRecipes(this.page, this.pageSize, this.searchQuery)
+        const data = await recipeService.getRecipes(this.page, this.pageSize, this.searchQuery, this.tagFilter)
         const newRecipes = data.recipes.map((recipe: Recipe) => ({
           ...recipe,
           defaultImageUrl: recipe.previewImageUrlTemplate.replace('<format>', 'crop-360x240')
@@ -54,11 +55,20 @@ export const useRecipeStore = defineStore('recipes', {
       this.fetchRecipes()
     },
 
+    setTagFilter(tags: string[]) {
+      this.tagFilter = tags
+      this.recipes = []
+      this.page = 1
+      this.allLoaded = false
+      this.fetchRecipes()
+    },
+
     resetStore() {
       this.recipes = []
       this.page = 1
       this.allLoaded = false
       this.searchQuery = ''
+      this.tagFilter = []
     }
   },
 
