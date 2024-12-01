@@ -1,0 +1,51 @@
+from typing import Any, Dict, List
+from fastapi import APIRouter, Depends, HTTPException, status
+from motor.motor_asyncio import AsyncIOMotorClient
+from src.database import get_db
+from .schemas import serialize_tags
+from .models import Tag
+
+router = APIRouter(
+    prefix="/tags",
+    tags=["Tags"],
+)
+collection = "tags"
+
+@router.get("/", status_code=status.HTTP_200_OK)
+async def get_tags(db: AsyncIOMotorClient = Depends(get_db)) -> List[Dict[str, Any]]:
+    """
+    Retrieve all tags.
+
+    @param db: Database connection
+    @return: List of tags
+    """
+    tags = db[collection].find()
+    return serialize_tags(tags)
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+async def create_tag(tag: Tag, db: AsyncIOMotorClient = Depends(get_db)) -> str:
+    """
+    Create a new tag.
+
+    @param tag: Tag model to create
+    @param db: Database connection
+    @return: Created tag ID
+    @raise HTTPException: If tag creation fails
+    """
+    try:
+        tag_dict = tag.model_dump()
+        result = db[collection].insert_one(tag_dict)
+
+        if result.inserted_id:
+            return str(result.inserted_id)
+
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Tag creation failed"
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )

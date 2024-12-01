@@ -14,10 +14,6 @@ class IngredientGroup(BaseModel):
     header: Optional[str] = None
     ingredients: Optional[List[Ingredient]] = None
 
-# class Tag(BaseModel):
-#     id: Optional[str] = Field(alias="_id", default=None)
-#     name: str = Field(min_length=2, max_length=100)
-
 class Recipe(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     title: str = Field(min_length=2, max_length=100)

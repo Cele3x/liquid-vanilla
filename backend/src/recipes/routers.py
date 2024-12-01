@@ -26,7 +26,7 @@ async def get_recipes(
         tags: Optional[List[str]] = Query(
             None,
             description="List of tag IDs to filter recipes",
-            example=["507f1f77bcf86cd799439011"]
+            examples=["507f1f77bcf86cd799439011"]
         ),
         search: Optional[str] = Query(
             None,
