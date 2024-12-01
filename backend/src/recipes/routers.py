@@ -23,10 +23,10 @@ async def get_recipes(
         db: AsyncIOMotorClient = Depends(get_db),
         page: int = Query(1, ge=1, description="Page number"),
         page_size: int = Query(20, le=100, description="Number of items per page"),
-        tags: Optional[List[str]] = Query(
-            None,
-            description="List of tag IDs to filter recipes",
-            examples=["507f1f77bcf86cd799439011"]
+        tags: List[str] = Query(
+            default=[],
+            description="List of tag IDs to filter recipes. Pass multiple times for multiple tags.",
+            examples=["?tags=507f1f77bcf86cd799439011&tags=507f1f77bcf86cd799439012"]
         ),
         search: Optional[str] = Query(
             None,
@@ -39,18 +39,18 @@ async def get_recipes(
     @param db: Database connection
     @param page: Page number (starting from 1)
     @param page_size: Number of items per page
-    @param tags: Optional list of tag IDs to filter recipes
+    @param tags: Optional list of tag IDs to filter recipes (use multiple tag parameters for multiple tags)
     @param search: Optional text to search for
     @return: Dictionary containing recipes and pagination info
-    @raise HTTPException: If invalid tag IDs are provided
+    @raise HTTPException: If invalid tag ID format is provided
     """
     skip = (page - 1) * page_size
     query: Dict[str, Any] = {}
 
     if tags:
         try:
-            tag_ids = [ObjectId(tag) for tag in tags]
-            query["tagIds"] = {"$all": tag_ids}
+            tag_ids = [ObjectId(tag.strip()) for tag in tags if tag.strip()]
+            query["tags"] = {"$in": tag_ids}
         except bson_errors.InvalidId as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
