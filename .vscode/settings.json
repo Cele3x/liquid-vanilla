@@ -1,0 +1,11 @@
+{
+    // VSCode settings.json for Python testing configuration
+    "python.testing.pytestArgs": [
+        "backend"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+
+    // Python environment file
+    "python.envFile": "${workspaceFolder}/.env.test",
+}
