@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hierarchical image caching supporting thousands of images across 65,536 directories
 - MongoDB aggregation pipeline with exclusion filters for locked recipes
 - Enhanced UI with lock/unlock buttons, visual indicators, and loading placeholders
+- Standardized commit process documentation in CLAUDE.md
 
 ## [1.0.0] - 2024-12-01
 

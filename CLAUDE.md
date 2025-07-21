@@ -264,6 +264,18 @@ Follow [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH):
 - Architectural improvements
 ```
 
+## Commit Process
+
+When instructed to commit changes, always follow this complete process:
+
+1. **Review Git Diff**: Analyze all changes using `git diff` and `git status`
+2. **Version Assessment**: Check if changes warrant a new version or should use current version from CHANGELOG.md
+3. **Update CHANGELOG.md**: Categorize changes logically (Features, Fixes, Changes, Technical Details). Remove or simplify less important items to keep concise.
+4. **Pre-commit Checks**: Run all quality checks:
+   - Backend: `python -m pytest` for tests
+   - Frontend: `npm run type-check` and `npm run format` 
+5. **Generate Commits**: Create clean, organized commits with appropriate messages
+
 ## Commit Message Format
 
 Follow these guidelines:
