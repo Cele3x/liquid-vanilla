@@ -1,10 +1,10 @@
 import api from './api'
 
 interface GetRecipesParams {
-  page?: number;
-  page_size?: number;
-  search?: string;
-  tags?: string[];
+  page?: number
+  page_size?: number
+  search?: string
+  tags?: string[]
 }
 
 export const recipeService = {
@@ -28,6 +28,11 @@ export const recipeService = {
 
   async getRecipe(id: string) {
     const response = await api.get(`/recipes/${id}`)
+    return response.data
+  },
+
+  async getRecommendations() {
+    const response = await api.get('/recipes/recommendations')
     return response.data
   }
 }

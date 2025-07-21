@@ -14,12 +14,21 @@ export default {
         'raleway': ['Raleway', 'sans-serif'],
       },
       colors: {
+        // Dark mode colors (default)
         'primary': '#111111',
         'secondary': '#3C3D37',
         'accent': '#C8C177',
         'light': '#ECDFCC',
         'gold': '#B8860B',
         'gold-hover': '#DAA520',
+        
+        // Light mode colors
+        'primary-light': '#ECDFCC',
+        'secondary-light': '#C8C177',
+        'accent-light': '#3C3D37',
+        'dark': '#111111',
+        'gold-light': '#B8860B',
+        'gold-hover-light': '#DAA520',
       },
       opacity: {
         '85': '0.85',

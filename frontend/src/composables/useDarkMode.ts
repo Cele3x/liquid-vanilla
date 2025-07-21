@@ -38,7 +38,7 @@ const initializeDarkMode = () => {
   } else {
     // No saved preference, use system preference or fallback to dark
     isDarkMode.value = getSystemPreference()
-    
+
     // Listen for system preference changes only if no user preference is saved
     if (typeof window !== 'undefined' && window.matchMedia) {
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
@@ -48,12 +48,12 @@ const initializeDarkMode = () => {
           isDarkMode.value = e.matches
         }
       }
-      
+
       // Add listener for system preference changes
       mediaQuery.addEventListener('change', handleSystemPreferenceChange)
     }
   }
-  
+
   // Initialize the watcher only once
   if (!isInitialized) {
     watch(isDarkMode, updateDarkMode, { immediate: true })

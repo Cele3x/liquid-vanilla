@@ -35,11 +35,11 @@ const handleClick = (tagId: String) => {
             :alt="tag.name"
             class="w-full h-32 object-cover mb-2"
           />
-          <p class="text-center text-lg">{{ tag.name }}</p>
+          <p class="text-center text-lg text-dark dark:text-light">{{ tag.name }}</p>
         </div>
       </div>
       <div v-if="loading" class="text-center mt-4">
-        <p class="text-light">Loading tags...</p>
+        <p class="text-dark dark:text-light">Loading tags...</p>
       </div>
     </section>
   </main>

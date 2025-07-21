@@ -9,6 +9,7 @@ interface Recipe {
   rating: number | null
   sourceRatingVotes: number | null
   previewImageUrlTemplate: string | null
+  cachedImageUrl?: string | null
   sourceUrl: string
   tagIds: string[]
 }
@@ -63,7 +64,11 @@ onMounted(() => {
           <!-- Recipe Image -->
           <div class="relative overflow-hidden aspect-w-16 aspect-h-9">
             <img
-              :src="recipe.previewImageUrlTemplate?.replace('<format>', 'crop-360x240') || placeholderImageDark"
+              :src="
+                recipe.cachedImageUrl ||
+                recipe.previewImageUrlTemplate?.replace('<format>', 'crop-360x240') ||
+                placeholderImageDark
+              "
               :alt="recipe.title"
               class="recipe-image object-cover w-full h-full transition-transform duration-300 ease-in-out"
             />
@@ -83,16 +88,25 @@ onMounted(() => {
               >
                 {{ tag.toUpperCase() }}
               </span>
-              <span v-if="recipe.tagIds.length > 1" class="text-gold-light dark:text-gold text-[8px]">◆</span>
+              <span
+                v-if="recipe.tagIds.length > 1"
+                class="text-gold-light dark:text-gold text-[8px]"
+                >◆</span
+              >
             </div>
 
             <!-- Recipe Title -->
-            <h3 class="text-dark dark:text-light font-raleway text-lg font-normal tracking-wide text-center mb-3">
+            <h3
+              class="text-dark dark:text-light font-raleway text-lg font-normal tracking-wide text-center mb-3"
+            >
               {{ recipe.title.toUpperCase() }}
             </h3>
 
             <!-- Recipe Rating -->
-            <div v-if="recipe.rating" class="recipe-rating flex items-center justify-center gap-3 text-gold-light dark:text-gold">
+            <div
+              v-if="recipe.rating"
+              class="recipe-rating flex items-center justify-center gap-3 text-gold-light dark:text-gold"
+            >
               <div class="tracking-wider text-sm flex items-center gap-2">
                 <div class="flex">
                   <span v-for="n in Math.floor(recipe.rating)" :key="n">★</span>

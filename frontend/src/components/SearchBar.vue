@@ -73,13 +73,13 @@ onUnmounted(() => {
         type="text"
         name="search"
         id="search"
-        class="w-full h-9 pl-3 pr-10 border border-secondary leading-5 bg-secondary text-light placeholder-accent focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent sm:text-sm"
+        class="w-full h-9 pl-3 pr-10 border border-secondary-light dark:border-secondary leading-5 bg-secondary-light dark:bg-secondary text-dark dark:text-light placeholder-accent-light dark:placeholder-accent focus:outline-none focus:ring-1 focus:ring-accent-light dark:focus:ring-accent focus:border-accent-light dark:focus:border-accent sm:text-sm"
         placeholder="Search"
       />
       <button
         v-if="searchQuery"
         @click="clearSearch"
-        class="absolute right-2 top-1/2 -translate-y-1/2 text-accent hover:text-light focus:outline-none"
+        class="absolute right-2 top-1/2 -translate-y-1/2 text-accent-light dark:text-accent hover:text-dark dark:hover:text-light focus:outline-none"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
