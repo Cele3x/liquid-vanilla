@@ -93,6 +93,27 @@ Required environment variables:
 - Responsive design with Tailwind CSS
 - TypeScript for type safety
 - Component-based architecture
+- Dark/Light mode support with theme persistence
+
+## UI/UX Design Requirements
+
+### Dark and Light Mode Support
+**CRITICAL**: All UI components and features must support both dark and light mode themes:
+
+- **Implementation**: Use Tailwind CSS dark mode classes (e.g., `dark:bg-secondary`, `dark:text-light`)
+- **Theme Switching**: Implement toggle functionality with persistent user preference
+- **Color Scheme**: Follow the established color palette defined in `frontend/src/assets/main.css`:
+  - Light mode: `bg-light`, `text-dark`, `bg-secondary-light`
+  - Dark mode: `dark:bg-secondary`, `dark:text-light`, `dark:bg-primary`
+- **Gold Theme**: Use gold accent colors (`bg-gold-light dark:bg-gold`) for interactive elements
+- **Accessibility**: Ensure proper contrast ratios in both themes
+- **Consistency**: All new components must have matching dark/light mode styling
+
+### Component Styling Guidelines
+- **No Rounded Edges**: Use square/straight edges for buttons and containers (avoid `rounded` classes)
+- **Gold Accent**: Use gold colors for primary actions and selected states
+- **Mobile-First**: Design components to be mobile-friendly and responsive
+- **Hover States**: Implement proper hover feedback with `cursor-pointer` and color transitions
 
 ## Testing
 
