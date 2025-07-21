@@ -17,6 +17,8 @@ class Settings:
         "http://localhost",
         "http://localhost:8000",
         "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
         "http://192.168.178.78",
         "https://liquid-vanilla.com",
     ]
@@ -28,6 +30,8 @@ class Settings:
     MONGO_DATABASE: str = os.getenv("MONGO_DATABASE", "RecipeDB")
     MONGO_URL = "mongodb://%s:%s/%s" % (MONGO_HOST, MONGO_PORT, MONGO_DATABASE)
     # MONGO_URL: str = os.getenv("MONGO_URL", "mongodb://%s:%s/%s" % (MONGO_HOST, MONGO_PORT, MONGO_DATABASE))
+
+    IMAGE_CACHE_DIR: str = os.getenv("IMAGE_CACHE_DIR", str(Path(__file__).parents[2] / "cache" / "recipe_images"))
 
 
 settings = Settings()

@@ -20,6 +20,9 @@ class Recipe(BaseModel):
     rating: Optional[float] = Field(ge=0.0, le=5.0, default=None)
     sourceUrl: Optional[str] = Field(min_length=10, max_length=2000, default=None)
     previewImageUrlTemplate: Optional[str] = Field(min_length=10, max_length=2000, default=None)
+    cachedImagePath: Optional[str] = Field(default=None)
+    cachedImageUrl: Optional[str] = Field(default=None)
+    imageCachedAt: Optional[datetime] = None
     additionalDescription: Optional[str] = None
     cookingTime: Optional[int] = None
     createdAt: Optional[datetime] = None

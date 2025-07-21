@@ -7,8 +7,9 @@ from bson import ObjectId, errors as bson_errors
 
 from .models import Recipe
 from .schemas import serialize_recipe, serialize_recipes
-from src.database import get_db
-from src.utils import convert_object_ids
+from ..database import get_db
+from ..utils import convert_object_ids
+from ..images.service import image_cache_service
 
 
 router = APIRouter(
@@ -16,6 +17,53 @@ router = APIRouter(
     tags=["Recipes"],
 )
 collection = "recipes"
+
+
+@router.get("/recommendations", status_code=status.HTTP_200_OK)
+async def get_recipe_recommendations(
+        db: AsyncIOMotorClient = Depends(get_db)
+) -> Dict[str, Any]:
+    """
+    Get 8 random recipe recommendations that have at least one image.
+    
+    :param db: Database connection
+    :returns: Dictionary containing recommended recipes
+    """
+    import random
+    
+    # Use faster approach: get random recipes from the main endpoint and filter
+    # This avoids the slow $sample aggregation with filtering
+    
+    # Get recipes with a larger page size to have more options to choose from
+    recipes = await db[collection].find({}).limit(50).to_list(50)
+    
+    # Filter recipes that have images
+    recipes_with_images = [
+        recipe for recipe in recipes 
+        if recipe.get("previewImageUrlTemplate") and 
+           recipe.get("previewImageUrlTemplate") != ""
+    ]
+    
+    # If we have enough recipes with images, randomly select 8
+    if len(recipes_with_images) >= 8:
+        recommendations = random.sample(recipes_with_images, 8)
+    else:
+        # If we don't have enough from the first 50, get more
+        all_recipes = await db[collection].find({}).to_list(None)
+        recipes_with_images = [
+            recipe for recipe in all_recipes 
+            if recipe.get("previewImageUrlTemplate") and 
+               recipe.get("previewImageUrlTemplate") != ""
+        ]
+        
+        if len(recipes_with_images) >= 8:
+            recommendations = random.sample(recipes_with_images, 8)
+        else:
+            recommendations = recipes_with_images
+    
+    return {
+        "recommendations": serialize_recipes(recommendations)
+    }
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
@@ -50,7 +98,7 @@ async def get_recipes(
     if tags:
         try:
             tag_ids = [ObjectId(tag.strip()) for tag in tags if tag.strip()]
-            query["tags"] = {"$in": tag_ids}
+            query["tagIds"] = {"$in": tag_ids}
         except bson_errors.InvalidId as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -60,9 +108,9 @@ async def get_recipes(
     if search:
         query["title"] = {"$regex": search, "$options": "i"}
 
-    recipes = db[collection].find(query).skip(skip).limit(page_size).sort("rating", -1)
+    recipes = await db[collection].find(query).skip(skip).limit(page_size).sort("rating", -1).to_list(page_size)
     print(f"db[${collection}].find({query}).skip({skip}).limit({page_size}).sort('rating', -1)")
-    total = db[collection].count_documents(query)
+    total = await db[collection].count_documents(query)
 
     return {
         "recipes": serialize_recipes(recipes),
@@ -80,7 +128,7 @@ async def create_recipe(
         db: AsyncIOMotorClient = Depends(get_db)
 ) -> str:
     """
-    Creates a new recipe with converted ObjectIds.
+    Creates a new recipe with converted ObjectIds and caches images.
 
     @param recipe: Recipe model to create
     @param db: Database connection
@@ -97,10 +145,28 @@ async def create_recipe(
         ]
 
         converted_dict = convert_object_ids(recipe_dict, fields_to_convert)
-        result = db[collection].insert_one(converted_dict)
+        result = await db[collection].insert_one(converted_dict)
 
         if result.inserted_id:
-            return str(result.inserted_id)
+            recipe_id = str(result.inserted_id)
+            
+            # Cache image asynchronously if image URL template exists
+            if recipe.previewImageUrlTemplate:
+                try:
+                    image_data = await image_cache_service.cache_image(
+                        recipe_id, recipe.previewImageUrlTemplate
+                    )
+                    
+                    # Update recipe with cached image info
+                    await db[collection].update_one(
+                        {"_id": ObjectId(recipe_id)},
+                        {"$set": image_data}
+                    )
+                except Exception as e:
+                    # Log error but don't fail recipe creation
+                    print(f"Failed to cache image for recipe {recipe_id}: {str(e)}")
+            
+            return recipe_id
 
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -116,16 +182,44 @@ async def create_recipe(
 
 @router.get("/{recipe_id}", status_code=status.HTTP_200_OK)
 async def get_recipe(recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
-    recipe = db[collection].find_one({"_id": ObjectId(recipe_id)})
-    if recipe:
-        return serialize_recipe(recipe)
-
-    raise HTTPException(status_code=404, detail="Recipe not found")
+    """
+    Get a single recipe by ID and cache its image if not already cached.
+    
+    :param recipe_id: Recipe ID
+    :param db: Database connection
+    :returns: Serialized recipe data
+    :raises HTTPException: If recipe not found
+    """
+    recipe = await db[collection].find_one({"_id": ObjectId(recipe_id)})
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Recipe not found")
+    
+    # Cache image if it exists but isn't cached yet
+    if (recipe.get("previewImageUrlTemplate") and 
+        not recipe.get("cachedImageUrl")):
+        try:
+            image_data = await image_cache_service.cache_image(
+                recipe_id, recipe["previewImageUrlTemplate"]
+            )
+            
+            # Update recipe with cached image info
+            await db[collection].update_one(
+                {"_id": ObjectId(recipe_id)},
+                {"$set": image_data}
+            )
+            
+            # Update the recipe dict with cached image info
+            recipe.update(image_data)
+        except Exception as e:
+            # Log error but don't fail recipe retrieval
+            print(f"Failed to cache image for recipe {recipe_id}: {str(e)}")
+    
+    return serialize_recipe(recipe)
 
 
 @router.put("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def update_recipe(recipe: Recipe, recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
-    result = db[collection].find_one_and_update({"_id": ObjectId(recipe_id)}, {"$set": recipe.model_dump()})
+    result = await db[collection].find_one_and_update({"_id": ObjectId(recipe_id)}, {"$set": recipe.model_dump()})
     if not result:
         raise HTTPException(status_code=404, detail="Recipe not found")
     return recipe
@@ -133,6 +227,6 @@ async def update_recipe(recipe: Recipe, recipe_id: str, db: AsyncIOMotorClient =
 
 @router.delete("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_recipe(recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
-    result = db[collection].find_one_and_delete({"_id": ObjectId(recipe_id)})
+    result = await db[collection].find_one_and_delete({"_id": ObjectId(recipe_id)})
     if not result:
         raise HTTPException(status_code=404, detail="Recipe not found")
