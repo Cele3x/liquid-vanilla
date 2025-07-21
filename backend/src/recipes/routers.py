@@ -29,41 +29,54 @@ async def get_recipe_recommendations(
     :param db: Database connection
     :returns: Dictionary containing recommended recipes
     """
-    import random
-    
-    # Use faster approach: get random recipes from the main endpoint and filter
-    # This avoids the slow $sample aggregation with filtering
-    
-    # Get recipes with a larger page size to have more options to choose from
-    recipes = await db[collection].find({}).limit(50).to_list(50)
-    
-    # Filter recipes that have images
-    recipes_with_images = [
-        recipe for recipe in recipes 
-        if recipe.get("previewImageUrlTemplate") and 
-           recipe.get("previewImageUrlTemplate") != ""
+    # Use MongoDB aggregation pipeline for truly random sampling
+    # This ensures we get different recommendations each time
+    pipeline = [
+        # Filter recipes that have image URLs
+        {
+            "$match": {
+                "previewImageUrlTemplate": {
+                    "$exists": True,
+                    "$ne": "",
+                    "$ne": None
+                }
+            }
+        },
+        # Randomly sample up to 8 recipes
+        {"$sample": {"size": 8}}
     ]
     
-    # If we have enough recipes with images, randomly select 8
-    if len(recipes_with_images) >= 8:
-        recommendations = random.sample(recipes_with_images, 8)
-    else:
-        # If we don't have enough from the first 50, get more
-        all_recipes = await db[collection].find({}).to_list(None)
-        recipes_with_images = [
-            recipe for recipe in all_recipes 
-            if recipe.get("previewImageUrlTemplate") and 
-               recipe.get("previewImageUrlTemplate") != ""
-        ]
+    try:
+        recommendations = await db[collection].aggregate(pipeline).to_list(8)
         
-        if len(recipes_with_images) >= 8:
-            recommendations = random.sample(recipes_with_images, 8)
-        else:
-            recommendations = recipes_with_images
-    
-    return {
-        "recommendations": serialize_recipes(recommendations)
-    }
+        return {
+            "recommendations": serialize_recipes(recommendations)
+        }
+        
+    except Exception as e:
+        # Fallback to simpler method if aggregation fails
+        print(f"Aggregation failed, using fallback: {str(e)}")
+        
+        # Get all recipes with images and sample randomly
+        all_recipes = await db[collection].find({
+            "previewImageUrlTemplate": {
+                "$exists": True,
+                "$ne": "",
+                "$ne": None
+            }
+        }).to_list(None)
+        
+        if not all_recipes:
+            return {"recommendations": []}
+        
+        import random
+        # Sample up to 8 recipes, or all if fewer available
+        sample_size = min(8, len(all_recipes))
+        recommendations = random.sample(all_recipes, sample_size)
+        
+        return {
+            "recommendations": serialize_recipes(recommendations)
+        }
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
