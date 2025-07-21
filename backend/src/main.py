@@ -12,14 +12,6 @@ from .images import routers as image_routers
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await check_connection()
-    
-    # Warm up recommendation cache in background
-    from .recipes.routers import warm_up_recommendation_cache
-    try:
-        await warm_up_recommendation_cache()
-    except Exception as e:
-        print(f"Warning: Could not warm up recommendation cache: {e}")
-    
     yield
 
 # Create an instance of the FastAPI application.
