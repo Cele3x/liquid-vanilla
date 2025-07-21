@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
-from backend.src.main import app
-from backend.src.config import settings
+from src.main import app
+from src.config import settings
 
 client = TestClient(app)
 
