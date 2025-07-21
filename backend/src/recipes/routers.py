@@ -1,4 +1,8 @@
 from typing import Any, Dict, List, Optional
+import asyncio
+import random
+from collections import deque
+from datetime import datetime, UTC
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -19,6 +23,108 @@ router = APIRouter(
 collection = "recipes"
 
 
+# Recommendation cache for fast serving
+class RecommendationCache:
+    """Fast in-memory cache for recipe recommendations."""
+    
+    def __init__(self):
+        self.cache: deque = deque(maxlen=50)  # Store up to 50 pre-fetched recipes
+        self.last_refresh: Optional[datetime] = None
+        self.refresh_interval = 300  # Refresh every 5 minutes
+        self._lock = asyncio.Lock()
+        
+    async def get_recommendations(self, db: AsyncIOMotorClient, count: int = 8) -> List[Dict]:
+        """Get recommendations from cache or fetch new ones."""
+        async with self._lock:
+            # Check if we need to refresh the cache
+            now = datetime.now(UTC)
+            needs_refresh = (
+                not self.cache or 
+                len(self.cache) < count or
+                not self.last_refresh or
+                (now - self.last_refresh).seconds > self.refresh_interval
+            )
+            
+            if needs_refresh:
+                await self._refresh_cache(db)
+            
+            # Return requested number of recommendations
+            if len(self.cache) >= count:
+                # Pop from cache (removes them so next call gets different ones)
+                recommendations = []
+                for _ in range(count):
+                    if self.cache:
+                        recommendations.append(self.cache.popleft())
+                return recommendations
+            else:
+                # Return all available if we don't have enough
+                recommendations = list(self.cache)
+                self.cache.clear()
+                return recommendations
+    
+    async def _refresh_cache(self, db: AsyncIOMotorClient):
+        """Refresh the cache with new random recipes."""
+        try:
+            # Use a faster approach: get a larger random sample using skip
+            # This is faster than $sample for large collections
+            
+            # First, get total count of recipes with images
+            count = await db[collection].count_documents({
+                "previewImageUrlTemplate": {"$exists": True, "$ne": "", "$ne": None}
+            })
+            
+            if count == 0:
+                return
+                
+            # Generate random skip values to get diverse recipes
+            batch_size = min(50, count)  # Get up to 50 recipes
+            random_skips = []
+            
+            if count > batch_size:
+                # Generate unique random skip values
+                skip_positions = random.sample(range(count - batch_size), min(10, count // batch_size))
+                
+                # For each skip position, get a small batch
+                for skip_pos in skip_positions:
+                    recipes_batch = await db[collection].find({
+                        "previewImageUrlTemplate": {"$exists": True, "$ne": "", "$ne": None}
+                    }).skip(skip_pos).limit(5).to_list(5)
+                    
+                    random_skips.extend(recipes_batch)
+            else:
+                # If small collection, get all and shuffle
+                random_skips = await db[collection].find({
+                    "previewImageUrlTemplate": {"$exists": True, "$ne": "", "$ne": None}
+                }).to_list(count)
+            
+            # Shuffle the results for extra randomness
+            random.shuffle(random_skips)
+            
+            # Update cache
+            self.cache.clear()
+            self.cache.extend(random_skips)
+            self.last_refresh = datetime.now(UTC)
+            
+        except Exception as e:
+            print(f"Failed to refresh recommendation cache: {e}")
+            # Keep existing cache on failure
+
+
+# Global cache instance
+recommendation_cache = RecommendationCache()
+
+
+async def warm_up_recommendation_cache():
+    """Background task to warm up the recommendation cache on startup."""
+    try:
+        from ..database import get_db
+        db = await get_db()
+        await recommendation_cache._refresh_cache(db)
+        print("Recommendation cache warmed up successfully")
+    except Exception as e:
+        print(f"Failed to warm up recommendation cache: {e}")
+
+
 @router.get("/recommendations", status_code=status.HTTP_200_OK)
 async def get_recipe_recommendations(
         db: AsyncIOMotorClient = Depends(get_db)
@@ -26,57 +132,40 @@ async def get_recipe_recommendations(
     """
     Get 8 random recipe recommendations that have at least one image.
     
+    Uses a fast in-memory cache that pre-loads recommendations for instant serving.
+    Cache refreshes automatically every 5 minutes or when depleted.
+    
     :param db: Database connection
     :returns: Dictionary containing recommended recipes
     """
-    # Use MongoDB aggregation pipeline for truly random sampling
-    # This ensures we get different recommendations each time
-    pipeline = [
-        # Filter recipes that have image URLs
-        {
-            "$match": {
-                "previewImageUrlTemplate": {
-                    "$exists": True,
-                    "$ne": "",
-                    "$ne": None
-                }
-            }
-        },
-        # Randomly sample up to 8 recipes
-        {"$sample": {"size": 8}}
-    ]
-    
     try:
-        recommendations = await db[collection].aggregate(pipeline).to_list(8)
+        # Get recommendations from fast cache
+        recommendations = await recommendation_cache.get_recommendations(db, 8)
+        
+        if not recommendations:
+            # Fallback if cache is completely empty
+            recommendations = await db[collection].find({
+                "previewImageUrlTemplate": {"$exists": True, "$ne": "", "$ne": None}
+            }).limit(8).to_list(8)
         
         return {
             "recommendations": serialize_recipes(recommendations)
         }
         
     except Exception as e:
-        # Fallback to simpler method if aggregation fails
-        print(f"Aggregation failed, using fallback: {str(e)}")
+        print(f"Recommendation cache failed, using simple fallback: {e}")
         
-        # Get all recipes with images and sample randomly
-        all_recipes = await db[collection].find({
-            "previewImageUrlTemplate": {
-                "$exists": True,
-                "$ne": "",
-                "$ne": None
+        # Simple fallback - get first 8 recipes with images
+        try:
+            recommendations = await db[collection].find({
+                "previewImageUrlTemplate": {"$exists": True, "$ne": "", "$ne": None}
+            }).limit(8).to_list(8)
+            
+            return {
+                "recommendations": serialize_recipes(recommendations)
             }
-        }).to_list(None)
-        
-        if not all_recipes:
+        except:
             return {"recommendations": []}
-        
-        import random
-        # Sample up to 8 recipes, or all if fewer available
-        sample_size = min(8, len(all_recipes))
-        recommendations = random.sample(all_recipes, sample_size)
-        
-        return {
-            "recommendations": serialize_recipes(recommendations)
-        }
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
