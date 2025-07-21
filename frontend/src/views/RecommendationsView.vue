@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { recipeService } from '@/services/recipeService'
 import placeholderImageDark from '@/assets/recipe-dark.png'
+import RecommendationFilters from '@/components/RecommendationFilters.vue'
 
 interface Recipe {
   id: string
@@ -17,6 +18,7 @@ interface Recipe {
 const recommendations = ref<Recipe[]>([])
 const loading = ref(false)
 const lockedRecipeIds = ref<Set<string>>(new Set())
+const currentFilters = ref<any>(null)
 
 const fetchRecommendations = async () => {
   loading.value = true
@@ -29,7 +31,7 @@ const fetchRecommendations = async () => {
 
   try {
     const lockedIds = Array.from(lockedRecipeIds.value)
-    const response = await recipeService.getRecommendations(lockedIds)
+    const response = await recipeService.getRecommendations(lockedIds, currentFilters.value)
     recommendations.value = response.recommendations
   } catch (error) {
     console.error('Error fetching recommendations:', error)
@@ -38,6 +40,12 @@ const fetchRecommendations = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const onFiltersChanged = (filters: any) => {
+  currentFilters.value = filters
+  // Auto-trigger recommendations load when filters change
+  fetchRecommendations()
 }
 
 const toggleLock = (recipeId: string) => {
@@ -58,13 +66,17 @@ const loadingPlaceholders = computed(() => {
   return Math.max(0, 8 - recommendations.value.length)
 })
 
-onMounted(() => {
-  fetchRecommendations()
-})
+// Initial load will be triggered by RecommendationFilters component
+// after it loads persisted filters from localStorage
 </script>
 
 <template>
   <div class="container mx-auto px-4 py-8">
+    <!-- Filter Component -->
+    <div class="mb-8">
+      <RecommendationFilters @filters-changed="onFiltersChanged" />
+    </div>
+
     <div class="text-center mb-8">
       <button
         @click="fetchRecommendations"

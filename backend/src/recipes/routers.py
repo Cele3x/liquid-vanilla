@@ -22,15 +22,39 @@ collection = "recipes"
 @router.get("/recommendations", status_code=status.HTTP_200_OK)
 async def get_recipe_recommendations(
         db: AsyncIOMotorClient = Depends(get_db),
-        locked_ids: Optional[str] = Query(None, description="Comma-separated list of locked recipe IDs")
+        locked_ids: Optional[str] = Query(None, description="Comma-separated list of locked recipe IDs"),
+        min_rating: Optional[float] = Query(4.0, description="Minimum recipe rating", ge=0.0, le=5.0),
+        min_votes: Optional[int] = Query(100, description="Minimum number of votes", ge=0),
+        max_votes: Optional[int] = Query(None, description="Maximum number of votes", ge=0),
+        has_image: Optional[bool] = Query(True, description="Only recipes with images"),
+        tag_ids: Optional[str] = Query(None, description="Comma-separated list of tag IDs"),
+        difficulty: Optional[str] = Query(None, description="Comma-separated difficulty levels (1,2,3)"),
+        min_cooking_time: Optional[int] = Query(None, description="Minimum cooking time in minutes", ge=0),
+        max_cooking_time: Optional[int] = Query(None, description="Maximum cooking time in minutes", ge=0),
+        min_prep_time: Optional[int] = Query(None, description="Minimum preparation time in minutes", ge=0),
+        max_prep_time: Optional[int] = Query(None, description="Maximum preparation time in minutes", ge=0),
+        min_total_time: Optional[int] = Query(None, description="Minimum total time in minutes", ge=0),
+        max_total_time: Optional[int] = Query(None, description="Maximum total time in minutes", ge=0)
 ) -> Dict[str, Any]:
     """
-    Get 8 random recipe recommendations that have at least one image.
+    Get 8 random recipe recommendations with customizable filters.
     Locked recipes will be kept in their positions and new random recipes will fill remaining slots.
     
     :param db: Database connection
     :param locked_ids: Comma-separated string of recipe IDs to keep locked in place
-    :returns: Dictionary containing recommended recipes
+    :param min_rating: Minimum recipe rating (default: 4.0)
+    :param min_votes: Minimum number of votes (default: 100)
+    :param max_votes: Maximum number of votes
+    :param has_image: Only include recipes with images (default: True)
+    :param tag_ids: Comma-separated list of tag IDs to filter by
+    :param difficulty: Comma-separated difficulty levels (1,2,3)
+    :param min_cooking_time: Minimum cooking time in minutes
+    :param max_cooking_time: Maximum cooking time in minutes
+    :param min_prep_time: Minimum preparation time in minutes
+    :param max_prep_time: Maximum preparation time in minutes
+    :param min_total_time: Minimum total time in minutes
+    :param max_total_time: Maximum total time in minutes
+    :returns: Dictionary containing filtered recommended recipes
     """
     try:
         locked_recipe_ids = []
@@ -56,12 +80,76 @@ async def get_recipe_recommendations(
         
         new_recipes = []
         if needed_count > 0:
-            # Get random recipes, excluding already locked ones
-            exclude_ids = [ObjectId(id) for id in locked_recipe_ids if ObjectId.is_valid(id)]
+            # Build filter query based on parameters
+            filter_query = {}
             
-            pipeline = []
+            # Exclude already locked recipes
+            exclude_ids = [ObjectId(id) for id in locked_recipe_ids if ObjectId.is_valid(id)]
             if exclude_ids:
-                pipeline.append({"$match": {"_id": {"$nin": exclude_ids}}})
+                filter_query["_id"] = {"$nin": exclude_ids}
+            
+            # Rating filter (handle null ratings)
+            if min_rating is not None and min_rating > 0:
+                # Only apply rating filter if min_rating is above 0
+                # This allows null ratings to pass through when min_rating is 0
+                filter_query["rating"] = {"$gte": min_rating}
+            
+            # Votes filter (using sourceRatingVotes, handle null values)
+            if min_votes is not None and min_votes > 0:
+                # Only apply votes filter if min_votes is above 0
+                filter_query["sourceRatingVotes"] = {"$gte": min_votes}
+            if max_votes is not None:
+                if "sourceRatingVotes" in filter_query:
+                    filter_query["sourceRatingVotes"]["$lte"] = max_votes
+                else:
+                    filter_query["sourceRatingVotes"] = {"$lte": max_votes}
+            
+            # Image filter
+            if has_image:
+                filter_query["previewImageUrlTemplate"] = {"$exists": True, "$ne": "", "$ne": None}
+            
+            # Tags filter
+            if tag_ids:
+                tag_id_list = [id.strip() for id in tag_ids.split(",") if id.strip()]
+                valid_tag_ids = [ObjectId(id) for id in tag_id_list if ObjectId.is_valid(id)]
+                if valid_tag_ids:
+                    filter_query["tags"] = {"$in": valid_tag_ids}
+            
+            # Difficulty filter
+            if difficulty:
+                diff_levels = [int(d.strip()) for d in difficulty.split(",") if d.strip().isdigit() and 1 <= int(d.strip()) <= 3]
+                if diff_levels:
+                    filter_query["difficulty"] = {"$in": diff_levels}
+            
+            # Time filters
+            if min_cooking_time is not None or max_cooking_time is not None:
+                cooking_time_filter = {}
+                if min_cooking_time is not None:
+                    cooking_time_filter["$gte"] = min_cooking_time
+                if max_cooking_time is not None:
+                    cooking_time_filter["$lte"] = max_cooking_time
+                filter_query["cookingTime"] = cooking_time_filter
+            
+            if min_prep_time is not None or max_prep_time is not None:
+                prep_time_filter = {}
+                if min_prep_time is not None:
+                    prep_time_filter["$gte"] = min_prep_time
+                if max_prep_time is not None:
+                    prep_time_filter["$lte"] = max_prep_time
+                filter_query["preparationTime"] = prep_time_filter
+            
+            if min_total_time is not None or max_total_time is not None:
+                total_time_filter = {}
+                if min_total_time is not None:
+                    total_time_filter["$gte"] = min_total_time
+                if max_total_time is not None:
+                    total_time_filter["$lte"] = max_total_time
+                filter_query["totalTime"] = total_time_filter
+            
+            # Build aggregation pipeline
+            pipeline = []
+            if filter_query:
+                pipeline.append({"$match": filter_query})
             pipeline.append({"$sample": {"size": needed_count}})
             
             new_recipes = await db[collection].aggregate(pipeline).to_list(needed_count)
