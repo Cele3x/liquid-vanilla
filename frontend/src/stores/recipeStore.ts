@@ -11,7 +11,7 @@ interface Recipe {
   cachedImageUrl?: string
   defaultImageUrl: string
   sourceUrl: string
-  tags: string[]
+  tagIds: string[]
 }
 
 export const useRecipeStore = defineStore('recipe', {

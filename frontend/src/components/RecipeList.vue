@@ -58,17 +58,19 @@ onUnmounted(() => {
           <div class="p-4">
             <!-- Recipe Tags -->
             <div
-              v-if="recipe.tags?.length"
+              v-if="recipe.tagIds?.length"
               class="flex items-center justify-center flex-wrap gap-3 mb-3"
             >
               <span
-                v-for="tag in recipe.tags"
+                v-for="tag in recipe.tagIds"
                 :key="tag"
                 class="text-gold-light dark:text-gold text-xs font-montserrat font-medium tracking-wider hover:text-gold-hover-light dark:hover:text-gold-hover transition-colors duration-200"
               >
                 {{ tag.toUpperCase() }}
               </span>
-              <span v-if="recipe.tags.length > 1" class="text-gold-light dark:text-gold text-[8px]"
+              <span
+                v-if="recipe.tagIds.length > 1"
+                class="text-gold-light dark:text-gold text-[8px]"
                 >◆</span
               >
             </div>

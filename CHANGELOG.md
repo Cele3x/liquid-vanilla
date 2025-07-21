@@ -8,27 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2025-07-21
 
 ### Added
+- **Recipe locking feature** for recommendations - users can lock specific recipes to keep them when fetching new recommendations
 - **Image caching system** with hierarchical directory structure for recipe images
-- Recipe recommendations endpoint returning recipes with images only
-- Tag icon support for visual recipe categorization
+- **Recipe recommendations** with true randomness using MongoDB `$sample` aggregation
+- Instant loading feedback with spinning wheels when fetching new recommendations
 - Dark mode support across the entire application
-- Comprehensive test suite with 86 tests and 90% code coverage
+- Comprehensive test suite with 90% code coverage
 
 ### Changed
 - **BREAKING**: Recipe model extended with cached image fields (`cachedImagePath`, `cachedImageUrl`, `imageCachedAt`)
 - Image caching uses MD5-based hierarchical directories (`cache/recipe_images/XX/YY/`) for performance at scale
+- Recipe recommendations now support locked recipes via `locked_ids` parameter
+- Recommendations button disabled when all 8 recipes are locked
 - Recipe retrieval prioritizes cached images over external URLs
-- Updated Node.js version in deployment workflow to v24
 
 ### Fixed
-- Tag filtering bug in recipe queries (corrected field name from `tags` to `tagIds`)
-- Frontend image fallback when cached images unavailable
+- Recipe recommendations now provide true randomness instead of returning same recipes repeatedly
+- Frontend TypeScript interface alignment with API response structure (`tags` → `tagIds`)
+- Recipe list display after fixing data structure mismatch
+- Consistent card heights for recipe recommendations with proper loading spinners
 
 ### Technical Details
+- Recipe locking system with backend parameter support and frontend state management
 - Hierarchical image caching supporting thousands of images across 65,536 directories
-- Async image downloading with aiohttp and aiofiles
-- Comprehensive test coverage including edge cases and error scenarios
-- Enhanced development environment with improved tooling and documentation
+- MongoDB aggregation pipeline with exclusion filters for locked recipes
+- Enhanced UI with lock/unlock buttons, visual indicators, and loading placeholders
 
 ## [1.0.0] - 2024-12-01
 

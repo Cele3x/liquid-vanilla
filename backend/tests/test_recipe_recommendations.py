@@ -213,3 +213,51 @@ class TestRecipeRecommendations:
         # At minimum, both calls should work and return valid data
         assert len(first_ids) <= 8
         assert len(second_ids) <= 8
+
+    def test_get_recommendations_with_locked_recipes(self, client, recipes_with_images):
+        """Test that locked recipes are preserved when getting new recommendations."""
+        # Create recipes with images
+        created_recipe_ids = []
+        for recipe in recipes_with_images:
+            response = client.post(RECIPE_URL, json=recipe)
+            assert response.status_code == 201
+            created_recipe_ids.append(response.text.strip('"'))
+
+        # Get initial recommendations
+        response = client.get(f"{RECIPE_URL}/recommendations")
+        assert response.status_code == 200
+        initial_recommendations = response.json()["recommendations"]
+        
+        # Lock the first 2 recipes
+        if len(initial_recommendations) >= 2:
+            locked_ids = [initial_recommendations[0]["id"], initial_recommendations[1]["id"]]
+            locked_ids_param = ",".join(locked_ids)
+            
+            # Get new recommendations with locked recipes
+            response = client.get(f"{RECIPE_URL}/recommendations", params={"locked_ids": locked_ids_param})
+            assert response.status_code == 200
+            
+            new_recommendations = response.json()["recommendations"]
+            new_ids = [r["id"] for r in new_recommendations]
+            
+            # Locked recipes should be included in the new recommendations
+            for locked_id in locked_ids:
+                assert locked_id in new_ids
+            
+            # Should still return up to 8 recommendations
+            assert len(new_recommendations) <= 8
+
+    def test_get_recommendations_with_invalid_locked_ids(self, client, recipes_with_images):
+        """Test recommendations with invalid locked IDs."""
+        # Create recipes with images
+        for recipe in recipes_with_images:
+            response = client.post(RECIPE_URL, json=recipe)
+            assert response.status_code == 201
+
+        # Test with invalid ObjectId
+        response = client.get(f"{RECIPE_URL}/recommendations", params={"locked_ids": "invalid_id,another_invalid"})
+        assert response.status_code == 200
+        
+        result = response.json()
+        # Should still return recommendations despite invalid IDs
+        assert "recommendations" in result

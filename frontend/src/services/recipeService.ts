@@ -31,8 +31,10 @@ export const recipeService = {
     return response.data
   },
 
-  async getRecommendations() {
-    const response = await api.get('/recipes/recommendations')
+  async getRecommendations(lockedIds?: string[]) {
+    const params = lockedIds && lockedIds.length > 0 ? { locked_ids: lockedIds.join(',') } : {}
+
+    const response = await api.get('/recipes/recommendations', { params })
     return response.data
   }
 }
