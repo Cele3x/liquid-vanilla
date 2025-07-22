@@ -8,32 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.1.0] - 2025-07-21
 
 ### Added
-- **Recipe locking feature** for recommendations - users can lock specific recipes to keep them when fetching new recommendations
-- **Image caching system** with hierarchical directory structure for recipe images
-- **Recipe recommendations** with true randomness using MongoDB `$sample` aggregation
-- Instant loading feedback with spinning wheels when fetching new recommendations
-- Dark mode support across the entire application
-- Comprehensive test suite with 90% code coverage
+- **Recipe locking feature** - users can lock specific recipes to keep them when fetching new recommendations
+- **Permanent image storage system** with hierarchical directory structure for recipe images
+- **Dark mode support** across the entire application with theme persistence
+- **Comprehensive recipe filtering system** for recommendations with advanced tag support
 
 ### Changed
-- **BREAKING**: Recipe model extended with cached image fields (`cachedImagePath`, `cachedImageUrl`, `imageCachedAt`)
-- Image caching uses MD5-based hierarchical directories (`cache/recipe_images/XX/YY/`) for performance at scale
-- Recipe recommendations now support locked recipes via `locked_ids` parameter
-- Recommendations button disabled when all 8 recipes are locked
-- Recipe retrieval prioritizes cached images over external URLs
+- Recipe model extended with permanent image storage fields (`storedImagePath`, `storedImageUrl`, `imageStoredAt`)
+- Recipe recommendations now use MongoDB `$sample` aggregation for true randomness across entire database
+- Image storage uses MD5-based hierarchical directories for performance at scale
+- Enhanced UI with loading indicators and visual feedback
 
 ### Fixed
-- Recipe recommendations now provide true randomness instead of returning same recipes repeatedly
-- Frontend TypeScript interface alignment with API response structure (`tags` → `tagIds`)
-- Recipe list display after fixing data structure mismatch
-- Consistent card heights for recipe recommendations with proper loading spinners
-
-### Technical Details
-- Recipe locking system with backend parameter support and frontend state management
-- Hierarchical image caching supporting thousands of images across 65,536 directories
-- MongoDB aggregation pipeline with exclusion filters for locked recipes
-- Enhanced UI with lock/unlock buttons, visual indicators, and loading placeholders
-- Standardized commit process documentation in CLAUDE.md
+- Recipe recommendations now provide genuine variety instead of repeating same subset
 
 ## [1.0.0] - 2024-12-01
 
