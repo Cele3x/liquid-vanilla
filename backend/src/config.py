@@ -28,8 +28,11 @@ class Settings:
     MONGO_USER: str = urllib.parse.quote_plus(os.getenv("MONGO_USER", ""))
     MONGO_PASSWORD: str = urllib.parse.quote_plus(os.getenv("MONGO_PASSWORD", ""))
     MONGO_DATABASE: str = os.getenv("MONGO_DATABASE", "RecipeDB")
-    MONGO_URL = "mongodb://%s:%s/%s" % (MONGO_HOST, MONGO_PORT, MONGO_DATABASE)
-    # MONGO_URL: str = os.getenv("MONGO_URL", "mongodb://%s:%s/%s" % (MONGO_HOST, MONGO_PORT, MONGO_DATABASE))
+    # Construct MongoDB URL with or without authentication
+    if MONGO_USER and MONGO_PASSWORD:
+        MONGO_URL = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DATABASE}"
+    else:
+        MONGO_URL = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DATABASE}"
 
     IMAGE_STORAGE_DIR: str = os.getenv("IMAGE_STORAGE_DIR", str(Path(__file__).parent / "static" / "images" / "recipes"))
 
