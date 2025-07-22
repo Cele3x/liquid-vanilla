@@ -39,14 +39,14 @@ async def get_category(category_id: str, db: AsyncIOMotorClient = Depends(get_db
     if not ObjectId.is_valid(category_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid category ID format"
+            detail="Ungültiges Kategorie-ID-Format"
         )
     
     category = await db[collection].find_one({"_id": ObjectId(category_id)})
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found"
+            detail="Kategorie nicht gefunden"
         )
     
     return serialize_category(category)
@@ -68,7 +68,7 @@ async def create_category(category: Category, db: AsyncIOMotorClient = Depends(g
         if existing_category:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail="Category with this name already exists"
+                detail="Kategorie mit diesem Namen existiert bereits"
             )
 
         category_dict = category.model_dump()
@@ -82,7 +82,7 @@ async def create_category(category: Category, db: AsyncIOMotorClient = Depends(g
 
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Category creation failed"
+            detail="Kategorie-Erstellung fehlgeschlagen"
         )
 
     except ValueError as e:
@@ -110,7 +110,7 @@ async def update_category(
     if not ObjectId.is_valid(category_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid category ID format"
+            detail="Ungültiges Kategorie-ID-Format"
         )
 
     # Check if category exists
@@ -118,7 +118,7 @@ async def update_category(
     if not existing_category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found"
+            detail="Kategorie nicht gefunden"
         )
 
     # Check if another category with the same name exists
@@ -143,7 +143,7 @@ async def update_category(
     if result.modified_count == 0:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Category update failed"
+            detail="Kategorie-Update fehlgeschlagen"
         )
 
     updated_category = await db[collection].find_one({"_id": ObjectId(category_id)})
@@ -162,7 +162,7 @@ async def delete_category(category_id: str, db: AsyncIOMotorClient = Depends(get
     if not ObjectId.is_valid(category_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid category ID format"
+            detail="Ungültiges Kategorie-ID-Format"
         )
 
     # Check if category exists
@@ -170,7 +170,7 @@ async def delete_category(category_id: str, db: AsyncIOMotorClient = Depends(get
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found"
+            detail="Kategorie nicht gefunden"
         )
 
     # Check if any tags are using this category
@@ -178,12 +178,12 @@ async def delete_category(category_id: str, db: AsyncIOMotorClient = Depends(get
     if tags_using_category:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Cannot delete category that has associated tags"
+            detail="Kategorie kann nicht gelöscht werden, da sie verknüpfte Tags hat"
         )
 
     result = await db[collection].delete_one({"_id": ObjectId(category_id)})
     if result.deleted_count == 0:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Category deletion failed"
+            detail="Kategorie-Löschung fehlgeschlagen"
         )

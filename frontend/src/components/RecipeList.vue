@@ -95,7 +95,7 @@ onUnmounted(() => {
               </div>
               <span class="text-[8px] text-gold-light dark:text-gold">◆</span>
               <span class="font-montserrat text-xs font-medium tracking-wider">
-                {{ recipe.sourceRatingVotes || 0 }} VOTES
+                {{ recipe.sourceRatingVotes || 0 }} STIMMEN
               </span>
             </div>
           </div>
@@ -103,10 +103,10 @@ onUnmounted(() => {
       </div>
     </div>
     <div v-if="loading" class="text-center mt-4">
-      <p class="text-dark dark:text-light">Loading more recipes...</p>
+      <p class="text-dark dark:text-light">Weitere Rezepte werden geladen...</p>
     </div>
     <div v-if="allLoaded" class="text-center mt-4">
-      <p class="text-dark dark:text-light">All recipes loaded</p>
+      <p class="text-dark dark:text-light">Alle Rezepte geladen</p>
     </div>
     <div class="h-screen"></div>
   </div>

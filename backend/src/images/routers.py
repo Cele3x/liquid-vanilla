@@ -24,7 +24,7 @@ async def get_stored_image(filename: str):
     file_path = image_storage_service.get_stored_image_path(filename)
     
     if not file_path:
-        raise HTTPException(status_code=404, detail="Image not found")
+        raise HTTPException(status_code=404, detail="Bild nicht gefunden")
     
     # Determine media type based on file extension
     extension = filename.split('.')[-1].lower()

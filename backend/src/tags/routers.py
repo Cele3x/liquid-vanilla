@@ -101,7 +101,7 @@ async def create_tag(tag: Tag, db: AsyncIOMotorClient = Depends(get_db)) -> str:
 
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Tag creation failed"
+            detail="Tag-Erstellung fehlgeschlagen"
         )
 
     except ValueError as e:

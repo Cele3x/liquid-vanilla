@@ -45,7 +45,7 @@ app.include_router(image_routers.router, prefix=f"{settings.BASE_URL}/images", t
 # Define a route for the root of the API.
 @app.get("/", tags=["Root"])
 async def read_root():
-    return {"message": "Welcome to the Recipe API!"}
+    return {"message": "Willkommen zur Rezept-API!"}
 
 
 # uvicorn main:app --reload
