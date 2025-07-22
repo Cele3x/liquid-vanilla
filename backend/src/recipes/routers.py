@@ -29,12 +29,6 @@ async def get_recipe_recommendations(
         has_image: Optional[bool] = Query(True, description="Only recipes with images"),
         tag_ids: Optional[str] = Query(None, description="Comma-separated list of tag IDs"),
         difficulty: Optional[str] = Query(None, description="Comma-separated difficulty levels (1,2,3)"),
-        min_cooking_time: Optional[int] = Query(None, description="Minimum cooking time in minutes", ge=0),
-        max_cooking_time: Optional[int] = Query(None, description="Maximum cooking time in minutes", ge=0),
-        min_prep_time: Optional[int] = Query(None, description="Minimum preparation time in minutes", ge=0),
-        max_prep_time: Optional[int] = Query(None, description="Maximum preparation time in minutes", ge=0),
-        min_total_time: Optional[int] = Query(None, description="Minimum total time in minutes", ge=0),
-        max_total_time: Optional[int] = Query(None, description="Maximum total time in minutes", ge=0)
 ) -> Dict[str, Any]:
     """
     Get 8 random recipe recommendations with customizable filters.
@@ -48,12 +42,6 @@ async def get_recipe_recommendations(
     :param has_image: Only include recipes with images (default: True)
     :param tag_ids: Comma-separated list of tag IDs to filter by
     :param difficulty: Comma-separated difficulty levels (1,2,3)
-    :param min_cooking_time: Minimum cooking time in minutes
-    :param max_cooking_time: Maximum cooking time in minutes
-    :param min_prep_time: Minimum preparation time in minutes
-    :param max_prep_time: Maximum preparation time in minutes
-    :param min_total_time: Minimum total time in minutes
-    :param max_total_time: Maximum total time in minutes
     :returns: Dictionary containing filtered recommended recipes
     """
     try:
@@ -121,30 +109,6 @@ async def get_recipe_recommendations(
                 if diff_levels:
                     filter_query["difficulty"] = {"$in": diff_levels}
             
-            # Time filters
-            if min_cooking_time is not None or max_cooking_time is not None:
-                cooking_time_filter = {}
-                if min_cooking_time is not None:
-                    cooking_time_filter["$gte"] = min_cooking_time
-                if max_cooking_time is not None:
-                    cooking_time_filter["$lte"] = max_cooking_time
-                filter_query["cookingTime"] = cooking_time_filter
-            
-            if min_prep_time is not None or max_prep_time is not None:
-                prep_time_filter = {}
-                if min_prep_time is not None:
-                    prep_time_filter["$gte"] = min_prep_time
-                if max_prep_time is not None:
-                    prep_time_filter["$lte"] = max_prep_time
-                filter_query["preparationTime"] = prep_time_filter
-            
-            if min_total_time is not None or max_total_time is not None:
-                total_time_filter = {}
-                if min_total_time is not None:
-                    total_time_filter["$gte"] = min_total_time
-                if max_total_time is not None:
-                    total_time_filter["$lte"] = max_total_time
-                filter_query["totalTime"] = total_time_filter
             
             # Build aggregation pipeline
             pipeline = []
@@ -347,7 +311,7 @@ async def create_recipe(
 
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Recipe creation failed"
+            detail="Rezept-Erstellung fehlgeschlagen"
         )
 
     except ValueError as e:
@@ -369,7 +333,7 @@ async def get_recipe(recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
     """
     recipe = await db[collection].find_one({"_id": ObjectId(recipe_id)})
     if not recipe:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise HTTPException(status_code=404, detail="Rezept nicht gefunden")
     
     # Store image if it exists but isn't stored yet
     if (recipe.get("previewImageUrlTemplate") and 
@@ -398,7 +362,7 @@ async def get_recipe(recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
 async def update_recipe(recipe: Recipe, recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
     result = await db[collection].find_one_and_update({"_id": ObjectId(recipe_id)}, {"$set": recipe.model_dump()})
     if not result:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise HTTPException(status_code=404, detail="Rezept nicht gefunden")
     return recipe
 
 
@@ -406,4 +370,4 @@ async def update_recipe(recipe: Recipe, recipe_id: str, db: AsyncIOMotorClient =
 async def delete_recipe(recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
     result = await db[collection].find_one_and_delete({"_id": ObjectId(recipe_id)})
     if not result:
-        raise HTTPException(status_code=404, detail="Recipe not found")
+        raise HTTPException(status_code=404, detail="Rezept nicht gefunden")
