@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-07-22
+
+### Added
+- **Pull-to-refresh functionality** for mobile devices - users can pull down from top to refresh recommendations
+- **Category-based tag organization** with improved tag management and display
+- **Enhanced number formatting** for better readability across the application
+
+### Changed
+- Recipe recommendation filters now have improved styling with better button colors and visual feedback
+- Mobile interface now uses pull-to-refresh instead of manual refresh button (hidden on screens < 768px)
+- Filter buttons have individual borders for cleaner appearance
+- Improved text readability for form placeholders and UI elements
+
+### Removed
+- **Time limit filters** from recipe recommendations (cooking time, preparation time, total time filters)
+
+### Technical Details
+- Touch-based pull-to-refresh with 80px threshold and smooth animations
+- Mobile-only event listeners with proper cleanup on component unmount
+- Responsive design improvements for better mobile experience
+
 ## [1.1.0] - 2025-07-21
 
 ### Added
