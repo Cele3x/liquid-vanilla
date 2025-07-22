@@ -8,9 +8,10 @@ interface Recipe {
   rating: number
   sourceRatingVotes: number
   previewImageUrlTemplate: string
+  cachedImageUrl?: string
   defaultImageUrl: string
   sourceUrl: string
-  tags: string[]
+  tagIds: string[]
 }
 
 export const useRecipeStore = defineStore('recipe', {
@@ -30,10 +31,19 @@ export const useRecipeStore = defineStore('recipe', {
 
       this.loading = true
       try {
-        const data = await recipeService.getRecipes(this.page, this.pageSize, this.searchQuery, this.tagFilter)
+        const data = await recipeService.getRecipes(
+          this.page,
+          this.pageSize,
+          this.searchQuery,
+          this.tagFilter
+        )
         const newRecipes = data.recipes.map((recipe: Recipe) => ({
           ...recipe,
-          defaultImageUrl: recipe.previewImageUrlTemplate.replace('<format>', 'crop-360x240')
+          defaultImageUrl:
+            recipe.cachedImageUrl ||
+            (recipe.previewImageUrlTemplate
+              ? recipe.previewImageUrlTemplate.replace('<format>', 'crop-360x240')
+              : '')
         }))
         this.recipes.push(...newRecipes)
         this.page++
@@ -74,7 +84,7 @@ export const useRecipeStore = defineStore('recipe', {
 
   getters: {
     getRecipeById: (state) => {
-      return (id: string) => state.recipes.find(recipe => recipe.id === id)
+      return (id: string) => state.recipes.find((recipe) => recipe.id === id)
     },
     hasRecipes: (state) => state.recipes.length > 0
   }

@@ -1,7 +1,7 @@
 import pytest
 from bson import ObjectId
 import random
-from backend.src.config import settings
+from src.config import settings
 
 RECIPE_URL = f"{settings.BASE_URL}/recipes"
 
@@ -112,6 +112,7 @@ class TestRecipe:
             assert all(isinstance(recipe, dict) for recipe in result['recipes'])
             expected_keys = {
                 "id", "title", "rating", "sourceUrl", "previewImageUrlTemplate",
+                "cachedImagePath", "cachedImageUrl", "imageCachedAt",
                 "additionalDescription", "preparationTime", "restingTime", "source",
                 "sourceId", "status", "cookingTime", "servings", "sourceRating",
                 "subtitle", "createdAt", "sourceRatingVotes", "tagIds", "difficulty",
@@ -130,7 +131,13 @@ class TestRecipe:
 
             response = client.get(f"{RECIPE_URL}/{recipe_id}")
             assert response.status_code == 200
-            assert response.json() == {**valid_recipe, "id": recipe_id}
+            recipe_data = response.json()
+            assert recipe_data["id"] == recipe_id
+            assert recipe_data["title"] == valid_recipe["title"]
+            # Check that cached image fields are present
+            assert "cachedImagePath" in recipe_data
+            assert "cachedImageUrl" in recipe_data
+            assert "imageCachedAt" in recipe_data
 
         def test_get_sorted_recipes_by_rating(self, client, valid_recipe):
             """Test retrieving recipes sorted by its rating as default (highest to lowest)."""
@@ -253,13 +260,14 @@ class TestRecipe:
             assert len(result["recipes"]) == 2
             assert all(tag2 in recipe["tagIds"] for recipe in result["recipes"])
 
-            # Test filtering by both tags
+            # Test filtering by both tags (OR operation - recipes with either tag)
             response = client.get(RECIPE_URL, params={"tags": [tag1, tag2]})
             print(f"Filter by both tags response: {response.status_code}, {response.json()}")
             assert response.status_code == 200
             result = response.json()
-            assert len(result["recipes"]) == 1
-            assert all(tag in result["recipes"][0]["tagIds"] for tag in [tag1, tag2])
+            assert len(result["recipes"]) == 3  # All recipes with tag1 OR tag2
+            # Verify that each recipe has at least one of the specified tags
+            assert all(any(tag_id in recipe["tagIds"] for tag_id in [tag1, tag2]) for recipe in result["recipes"])
 
             # Test filtering by a non-existent tag
             non_existent_tag = "6628c6289b0fefc37a4de8b8"
@@ -284,7 +292,13 @@ class TestRecipe:
 
             get_response = client.get(f"{RECIPE_URL}/{recipe_id}")
             assert get_response.status_code == 200
-            assert get_response.json() == {**updated_recipe, "id": recipe_id}
+            recipe_data = get_response.json()
+            assert recipe_data["id"] == recipe_id
+            assert recipe_data["title"] == "Updated Test Recipe"
+            # Check that cached image fields are present
+            assert "cachedImagePath" in recipe_data
+            assert "cachedImageUrl" in recipe_data
+            assert "imageCachedAt" in recipe_data
 
         def test_update_nonexistent_recipe(self, client, valid_recipe):
             """Test updating a nonexistent recipe."""

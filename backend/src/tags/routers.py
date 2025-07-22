@@ -1,7 +1,7 @@
 from typing import Any, Dict, List
 from fastapi import APIRouter, Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorClient
-from src.database import get_db
+from ..database import get_db
 from .schemas import serialize_tags
 from .models import Tag
 
@@ -19,7 +19,7 @@ async def get_tags(db: AsyncIOMotorClient = Depends(get_db)) -> List[Dict[str, A
     @param db: Database connection
     @return: List of tags
     """
-    tags = db[collection].find().sort({ "usageCount": -1 })
+    tags = await db[collection].find().sort({ "usageCount": -1 }).to_list(None)
     return serialize_tags(tags)
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -34,7 +34,7 @@ async def create_tag(tag: Tag, db: AsyncIOMotorClient = Depends(get_db)) -> str:
     """
     try:
         tag_dict = tag.model_dump()
-        result = db[collection].insert_one(tag_dict)
+        result = await db[collection].insert_one(tag_dict)
 
         if result.inserted_id:
             return str(result.inserted_id)
