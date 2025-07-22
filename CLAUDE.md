@@ -285,6 +285,25 @@ Follow [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH):
 - Architectural improvements
 ```
 
+#### Changelog Quality Guidelines
+
+**Focus on User Impact**: Only include changes that affect users or the application's capabilities:
+- ✅ New features, breaking changes, significant architectural improvements
+- ❌ Internal development fixes, TypeScript compilation errors, temporary workarounds
+
+**Remove Same-Version Fixes**: Don't include fixes for bugs that were introduced in the same development cycle:
+- ✅ "Fix recipe recommendations to provide genuine variety" (addresses long-standing issue)
+- ❌ "Fix TypeScript compilation errors" (internal development issue)
+
+**Use Consistent Terminology**: 
+- Use "permanent storage" not "caching" for persistent data storage
+- Use "stored" field names for permanent data, "cached" for temporary data
+- Be precise about whether features are temporary or permanent
+
+**Keep Technical Details Minimal**: Remove overly detailed implementation specifics:
+- ✅ "Uses MD5-based hierarchical directories for performance"
+- ❌ "Hierarchical image caching supporting thousands of images across 65,536 directories"
+
 ## Commit Process
 
 When instructed to commit changes, always follow this complete process:
