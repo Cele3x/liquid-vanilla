@@ -41,7 +41,7 @@ class Recipe(BaseModel):
     sourceViewCount: Optional[int] = None
     status: Optional[str] = None
     subtitle: Optional[str] = None
-    tagIds: Optional[List[PyObjectId]] = None
+    tags: Optional[List[PyObjectId]] = None
     totalTime: Optional[int] = None
     userId: Optional[PyObjectId] = None
 
@@ -69,7 +69,7 @@ class Recipe(BaseModel):
                 "sourceRatingVotes": 1000,
                 "status": "active",
                 "subtitle": "Quick and delicious",
-                "tagIds": ["6628c6369b0fefc37a4de90d", "6628c6369b0fefc37a4de90d"],
+                "tags": ["6628c6369b0fefc37a4de90d", "6628c6369b0fefc37a4de90d"],
                 "ingredientGroups": [
                     {
                         "header": "Für das Gemüse:",

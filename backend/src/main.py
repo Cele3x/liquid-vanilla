@@ -6,6 +6,7 @@ from src.config import settings
 from src.database import check_connection
 from src.recipes import routers as recipe_routers
 from src.tags import routers as tag_routers
+from src.categories import routers as category_routers
 from src.images import routers as image_routers
 
 
@@ -37,6 +38,7 @@ app.add_middleware(
 # Include routers that handle requests to the API.
 app.include_router(recipe_routers.router, prefix=settings.BASE_URL)
 app.include_router(tag_routers.router, prefix=settings.BASE_URL)
+app.include_router(category_routers.router, prefix=settings.BASE_URL)
 app.include_router(image_routers.router, prefix=f"{settings.BASE_URL}/images", tags=["Images"])
 
 
