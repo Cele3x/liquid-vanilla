@@ -31,7 +31,7 @@ class Settings:
     MONGO_URL = "mongodb://%s:%s/%s" % (MONGO_HOST, MONGO_PORT, MONGO_DATABASE)
     # MONGO_URL: str = os.getenv("MONGO_URL", "mongodb://%s:%s/%s" % (MONGO_HOST, MONGO_PORT, MONGO_DATABASE))
 
-    IMAGE_CACHE_DIR: str = os.getenv("IMAGE_CACHE_DIR", str(Path(__file__).parents[2] / "cache" / "recipe_images"))
+    IMAGE_STORAGE_DIR: str = os.getenv("IMAGE_STORAGE_DIR", str(Path(__file__).parent / "static" / "images" / "recipes"))
 
 
 settings = Settings()

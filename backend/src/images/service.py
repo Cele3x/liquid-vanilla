@@ -1,5 +1,5 @@
 """
-Image caching service for downloading and storing recipe images locally.
+Image storage service for downloading and storing recipe images permanently.
 
 :module: images.service
 """
@@ -15,19 +15,19 @@ from fastapi import HTTPException
 from ..config import settings
 
 
-class ImageCacheService:
-    """Service for caching external recipe images locally."""
+class ImageStorageService:
+    """Service for permanently storing external recipe images locally."""
     
     def __init__(self):
-        self.cache_dir = Path(settings.IMAGE_CACHE_DIR)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.storage_dir = Path(settings.IMAGE_STORAGE_DIR)
+        self.storage_dir.mkdir(parents=True, exist_ok=True)
         
     def _get_image_path_and_filename(self, url: str, format_type: str = "crop-360x240") -> tuple[Path, str]:
         """
         Generate hierarchical directory structure and filename for an image.
         
         Uses the first 2 characters of the hash as subdirectories for better performance.
-        Example: hash 'a1b2c3...' -> cache/recipe_images/a1/b2/a1b2c3...jpg
+        Example: hash 'a1b2c3...' -> static/images/recipes/a1/b2/a1b2c3...jpg
         
         :param url: Original image URL template
         :param format_type: Image format type (e.g., 'crop-360x240')
@@ -50,31 +50,31 @@ class ImageCacheService:
         level1 = url_hash[:2]  # First 2 characters
         level2 = url_hash[2:4]  # Next 2 characters
         
-        subdir_path = self.cache_dir / level1 / level2
+        subdir_path = self.storage_dir / level1 / level2
         full_path = subdir_path / filename
         
         return full_path, filename
     
-    async def cache_image(self, recipe_id: str, image_url_template: str, 
+    async def store_image(self, recipe_id: str, image_url_template: str, 
                          format_type: str = "crop-360x240") -> dict[str, str]:
         """
-        Download and cache an image from external URL.
+        Download and permanently store an image from external URL.
         
         :param recipe_id: Recipe ID for logging purposes
         :param image_url_template: URL template with <format> placeholder
         :param format_type: Image format to download
-        :returns: Dictionary with cached image info
+        :returns: Dictionary with stored image info
         :raises HTTPException: If download fails
         """
         processed_url = image_url_template.replace('<format>', format_type)
         file_path, filename = self._get_image_path_and_filename(image_url_template, format_type)
         
-        # Return existing cached image if it exists
+        # Return existing stored image if it exists
         if file_path.exists():
             return {
-                "cached_image_path": str(file_path),
-                "cached_image_url": f"/api/v1/images/{filename}",
-                "image_cached_at": datetime.now(UTC).isoformat()
+                "stored_image_path": str(file_path),
+                "stored_image_url": f"/api/v1/images/{filename}",
+                "image_stored_at": datetime.now(UTC).isoformat()
             }
         
         # Create directory structure if it doesn't exist
@@ -90,7 +90,7 @@ class ImageCacheService:
                             detail=f"Failed to download image from {processed_url}: {response.status}"
                         )
                     
-                    # Save image to hierarchical cache directory
+                    # Save image to hierarchical storage directory
                     async with aiofiles.open(file_path, 'wb') as file:
                         async for chunk in response.content.iter_chunked(8192):
                             await file.write(chunk)
@@ -103,20 +103,20 @@ class ImageCacheService:
         except Exception as e:
             raise HTTPException(
                 status_code=500, 
-                detail=f"Error caching image for recipe {recipe_id}: {str(e)}"
+                detail=f"Error storing image for recipe {recipe_id}: {str(e)}"
             )
         
         return {
-            "cached_image_path": str(file_path),
-            "cached_image_url": f"/api/v1/images/{filename}",
-            "image_cached_at": datetime.now(UTC).isoformat()
+            "stored_image_path": str(file_path),
+            "stored_image_url": f"/api/v1/images/{filename}",
+            "image_stored_at": datetime.now(UTC).isoformat()
         }
     
-    def get_cached_image_path(self, filename: str) -> Optional[Path]:
+    def get_stored_image_path(self, filename: str) -> Optional[Path]:
         """
-        Get path to cached image file using hierarchical directory structure.
+        Get path to stored image file using hierarchical directory structure.
         
-        :param filename: Cached image filename (should start with hash)
+        :param filename: Stored image filename (should start with hash)
         :returns: Path to image file if exists, None otherwise
         """
         # Extract hash from filename (format: hash_format.ext)
@@ -130,40 +130,9 @@ class ImageCacheService:
         # Reconstruct hierarchical path
         level1 = hash_part[:2]
         level2 = hash_part[2:4]
-        file_path = self.cache_dir / level1 / level2 / filename
+        file_path = self.storage_dir / level1 / level2 / filename
         
         return file_path if file_path.exists() else None
     
-    def delete_cached_image(self, filename: str) -> bool:
-        """
-        Delete a cached image file from hierarchical directory structure.
-        
-        :param filename: Cached image filename
-        :returns: True if deleted successfully, False otherwise
-        """
-        file_path = self.get_cached_image_path(filename)
-        if file_path and file_path.exists():
-            try:
-                file_path.unlink()
-                
-                # Clean up empty directories if possible
-                try:
-                    parent_dir = file_path.parent
-                    if not any(parent_dir.iterdir()):  # Directory is empty
-                        parent_dir.rmdir()
-                        # Try to remove grandparent if also empty
-                        grandparent_dir = parent_dir.parent
-                        if grandparent_dir != self.cache_dir and not any(grandparent_dir.iterdir()):
-                            grandparent_dir.rmdir()
-                except OSError:
-                    # Directory not empty or permission denied - that's fine
-                    pass
-                    
-                return True
-            except OSError:
-                return False
-        return False
-
-
 # Global service instance
-image_cache_service = ImageCacheService()
+image_storage_service = ImageStorageService()

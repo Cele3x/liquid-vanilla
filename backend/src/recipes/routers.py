@@ -9,7 +9,7 @@ from .models import Recipe
 from .schemas import serialize_recipe, serialize_recipes
 from ..database import get_db
 from ..utils import convert_object_ids
-from ..images.service import image_cache_service
+from ..images.service import image_storage_service
 
 
 router = APIRouter(
@@ -261,21 +261,21 @@ async def create_recipe(
         if result.inserted_id:
             recipe_id = str(result.inserted_id)
             
-            # Cache image asynchronously if image URL template exists
+            # Store image permanently if image URL template exists
             if recipe.previewImageUrlTemplate:
                 try:
-                    image_data = await image_cache_service.cache_image(
+                    image_data = await image_storage_service.store_image(
                         recipe_id, recipe.previewImageUrlTemplate
                     )
                     
-                    # Update recipe with cached image info
+                    # Update recipe with stored image info
                     await db[collection].update_one(
                         {"_id": ObjectId(recipe_id)},
                         {"$set": image_data}
                     )
                 except Exception as e:
                     # Log error but don't fail recipe creation
-                    print(f"Failed to cache image for recipe {recipe_id}: {str(e)}")
+                    print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
             
             return recipe_id
 
@@ -305,25 +305,25 @@ async def get_recipe(recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
     
-    # Cache image if it exists but isn't cached yet
+    # Store image if it exists but isn't stored yet
     if (recipe.get("previewImageUrlTemplate") and 
-        not recipe.get("cachedImageUrl")):
+        not recipe.get("stored_image_url")):
         try:
-            image_data = await image_cache_service.cache_image(
+            image_data = await image_storage_service.store_image(
                 recipe_id, recipe["previewImageUrlTemplate"]
             )
             
-            # Update recipe with cached image info
+            # Update recipe with stored image info
             await db[collection].update_one(
                 {"_id": ObjectId(recipe_id)},
                 {"$set": image_data}
             )
             
-            # Update the recipe dict with cached image info
+            # Update the recipe dict with stored image info
             recipe.update(image_data)
         except Exception as e:
             # Log error but don't fail recipe retrieval
-            print(f"Failed to cache image for recipe {recipe_id}: {str(e)}")
+            print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
     
     return serialize_recipe(recipe)
 
