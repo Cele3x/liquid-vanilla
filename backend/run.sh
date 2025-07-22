@@ -10,8 +10,8 @@ VENV=$DIR/.venv/bin/activate
 #BIND=unix:$DIR/run/gunicorn.sock
 BIND=0.0.0.0:8000
 
-# Change to the project source directory
-cd $DIR_SRC || exit
+# Change to the project directory (not src directory)
+cd $DIR || exit
 
 # Activate the virtual environment
 source $VENV
@@ -30,7 +30,7 @@ cleanup() {
 trap cleanup SIGTERM
 
 # Run the application using Gunicorn
-gunicorn main:app \
+gunicorn src.main:app \
   --name $NAME \
   --workers $WORKERS \
   --worker-class $WORKER_CLASS \

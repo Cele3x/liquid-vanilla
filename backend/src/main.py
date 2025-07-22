@@ -2,11 +2,11 @@ from fastapi import FastAPI
 import uvicorn
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from .config import settings
-from .database import check_connection
-from .recipes import routers as recipe_routers
-from .tags import routers as tag_routers
-from .images import routers as image_routers
+from src.config import settings
+from src.database import check_connection
+from src.recipes import routers as recipe_routers
+from src.tags import routers as tag_routers
+from src.images import routers as image_routers
 
 
 @asynccontextmanager
