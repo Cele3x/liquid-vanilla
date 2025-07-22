@@ -300,3 +300,6 @@ cython_debug/
 
 # MongoDB playground files
 *.mongodb.js
+
+# Claude Code
+.claude
