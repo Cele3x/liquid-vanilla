@@ -1,4 +1,3 @@
-
 import { defineStore } from 'pinia'
 import { tagService } from '@/services/tagService'
 
@@ -10,7 +9,7 @@ interface Tag {
 export const useTagStore = defineStore('tag', {
   state: () => ({
     tags: [] as Tag[],
-    loading: false,
+    loading: false
   }),
   actions: {
     async fetchTags() {

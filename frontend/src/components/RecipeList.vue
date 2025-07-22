@@ -58,26 +58,34 @@ onUnmounted(() => {
           <div class="p-4">
             <!-- Recipe Tags -->
             <div
-              v-if="recipe.tags?.length"
+              v-if="recipe.tagIds?.length"
               class="flex items-center justify-center flex-wrap gap-3 mb-3"
             >
               <span
-                v-for="tag in recipe.tags"
+                v-for="tag in recipe.tagIds"
                 :key="tag"
-                class="text-gold text-xs font-montserrat font-medium tracking-wider hover:text-gold-hover transition-colors duration-200"
+                class="text-gold-light dark:text-gold text-xs font-montserrat font-medium tracking-wider hover:text-gold-hover-light dark:hover:text-gold-hover transition-colors duration-200"
               >
                 {{ tag.toUpperCase() }}
               </span>
-              <span v-if="recipe.tags.length > 1" class="text-gold text-[8px]">◆</span>
+              <span
+                v-if="recipe.tagIds.length > 1"
+                class="text-gold-light dark:text-gold text-[8px]"
+                >◆</span
+              >
             </div>
 
             <!-- Recipe Title -->
-            <h3 class="text-light font-raleway text-lg font-normal tracking-wide text-center mb-3">
+            <h3
+              class="text-dark dark:text-light font-raleway text-lg font-normal tracking-wide text-center mb-3"
+            >
               {{ recipe.title.toUpperCase() }}
             </h3>
 
             <!-- Recipe Rating -->
-            <div class="recipe-rating flex items-center justify-center gap-3 text-gold">
+            <div
+              class="recipe-rating flex items-center justify-center gap-3 text-gold-light dark:text-gold"
+            >
               <div class="tracking-wider text-sm flex items-center gap-2">
                 <div class="flex">
                   <span v-for="n in Math.floor(recipe.rating)" :key="n">★</span>
@@ -85,7 +93,7 @@ onUnmounted(() => {
                 </div>
                 <span class="font-montserrat text-xs">{{ recipe.rating.toFixed(1) }}</span>
               </div>
-              <span class="text-[8px]">◆</span>
+              <span class="text-[8px] text-gold-light dark:text-gold">◆</span>
               <span class="font-montserrat text-xs font-medium tracking-wider">
                 {{ recipe.sourceRatingVotes || 0 }} VOTES
               </span>
@@ -95,10 +103,10 @@ onUnmounted(() => {
       </div>
     </div>
     <div v-if="loading" class="text-center mt-4">
-      <p class="text-light">Loading more recipes...</p>
+      <p class="text-dark dark:text-light">Loading more recipes...</p>
     </div>
     <div v-if="allLoaded" class="text-center mt-4">
-      <p class="text-light">All recipes loaded</p>
+      <p class="text-dark dark:text-light">All recipes loaded</p>
     </div>
     <div class="h-screen"></div>
   </div>

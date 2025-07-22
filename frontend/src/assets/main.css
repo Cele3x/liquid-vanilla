@@ -1,3 +1,66 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  /* Define custom colors for TailwindCSS v4 */
+  --color-primary: #111111;
+  --color-secondary: #3c3d37;
+  --color-accent: #c8c177;
+  --color-light: #ecdfcc;
+  --color-gold: #b8860b;
+  --color-gold-hover: #daa520;
+  --color-primary-light: #ecdfcc;
+  --color-secondary-light: #c8c177;
+  --color-accent-light: #3c3d37;
+  --color-dark: #111111;
+  --color-gold-light: #b8860b;
+  --color-gold-hover-light: #daa520;
+
+  /* Font families */
+  --font-family-sans: 'Montserrat', sans-serif;
+  --font-family-playfair: 'Playfair Display', serif;
+  --font-family-montserrat: 'Montserrat', sans-serif;
+  --font-family-lato: 'Lato', sans-serif;
+  --font-family-raleway: 'Raleway', sans-serif;
+}
+
+/* Configure dark mode to use class instead of media query */
+@variant dark (.dark &);
+
+/* Base styles for better responsive behavior */
+html {
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  font-family: 'Montserrat', sans-serif;
+  line-height: 1.6;
+}
+
+/* Ensure proper responsive font scaling */
+@media (max-width: 640px) {
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 768px) {
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 769px) {
+  html {
+    font-size: 16px;
+  }
+}

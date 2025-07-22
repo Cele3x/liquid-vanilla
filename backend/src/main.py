@@ -2,10 +2,11 @@ from fastapi import FastAPI
 import uvicorn
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
-from config import settings
-from database import check_connection
-from recipes import routers as recipe_routers
-from tags import routers as tag_routers
+from .config import settings
+from .database import check_connection
+from .recipes import routers as recipe_routers
+from .tags import routers as tag_routers
+from .images import routers as image_routers
 
 
 @asynccontextmanager
@@ -36,6 +37,7 @@ app.add_middleware(
 # Include routers that handle requests to the API.
 app.include_router(recipe_routers.router, prefix=settings.BASE_URL)
 app.include_router(tag_routers.router, prefix=settings.BASE_URL)
+app.include_router(image_routers.router, prefix=f"{settings.BASE_URL}/images", tags=["Images"])
 
 
 # Define a route for the root of the API.

@@ -1,6 +1,6 @@
 import pytest
 from bson import ObjectId
-from backend.src.config import settings
+from src.config import settings
 
 TAG_URL = f"{settings.BASE_URL}/tags"
 
