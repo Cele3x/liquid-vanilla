@@ -96,13 +96,13 @@ async def get_test_db():
 
 
 @pytest.fixture
-def mock_image_cache_service():
-    """Mock image cache service for testing."""
+def mock_image_storage_service():
+    """Mock image storage service for testing."""
     mock_service = AsyncMock()
-    mock_service.cache_image.return_value = {
-        "cached_image_path": "/test/path/image.jpg",
-        "cached_image_url": "/api/v1/images/test_image.jpg", 
-        "image_cached_at": datetime.now(UTC).isoformat()
+    mock_service.store_image.return_value = {
+        "stored_image_path": "/test/path/image.jpg",
+        "stored_image_url": "/api/v1/images/test_image.jpg", 
+        "image_stored_at": datetime.now(UTC).isoformat()
     }
     return mock_service
 

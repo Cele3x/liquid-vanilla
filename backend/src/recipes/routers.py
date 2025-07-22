@@ -157,6 +157,28 @@ async def get_recipe_recommendations(
         # Combine locked and new recipes
         all_recommendations = locked_recipes + new_recipes
         
+        # Store images for recipes that have image URLs but no stored images
+        for recipe in all_recommendations:
+            if (recipe.get("previewImageUrlTemplate") and 
+                not recipe.get("stored_image_url")):
+                try:
+                    recipe_id = str(recipe["_id"])
+                    image_data = await image_storage_service.store_image(
+                        recipe_id, recipe["previewImageUrlTemplate"]
+                    )
+                    
+                    # Update recipe with stored image info
+                    await db[collection].update_one(
+                        {"_id": ObjectId(recipe_id)},
+                        {"$set": image_data}
+                    )
+                    
+                    # Update the recipe dict with stored image info
+                    recipe.update(image_data)
+                except Exception as e:
+                    # Log error but don't fail recipe retrieval
+                    print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
+        
         return {
             "recommendations": serialize_recipes(all_recommendations)
         }
@@ -169,6 +191,28 @@ async def get_recipe_recommendations(
             recommendations = await db[collection].find({
                 "previewImageUrlTemplate": {"$exists": True, "$ne": "", "$ne": None}
             }).limit(8).to_list(8)
+            
+            # Store images for fallback recipes that have image URLs but no stored images
+            for recipe in recommendations:
+                if (recipe.get("previewImageUrlTemplate") and 
+                    not recipe.get("stored_image_url")):
+                    try:
+                        recipe_id = str(recipe["_id"])
+                        image_data = await image_storage_service.store_image(
+                            recipe_id, recipe["previewImageUrlTemplate"]
+                        )
+                        
+                        # Update recipe with stored image info
+                        await db[collection].update_one(
+                            {"_id": ObjectId(recipe_id)},
+                            {"$set": image_data}
+                        )
+                        
+                        # Update the recipe dict with stored image info
+                        recipe.update(image_data)
+                    except Exception as e:
+                        # Log error but don't fail recipe retrieval
+                        print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
             
             return {
                 "recommendations": serialize_recipes(recommendations)
@@ -222,6 +266,28 @@ async def get_recipes(
     recipes = await db[collection].find(query).skip(skip).limit(page_size).sort("rating", -1).to_list(page_size)
     print(f"db[${collection}].find({query}).skip({skip}).limit({page_size}).sort('rating', -1)")
     total = await db[collection].count_documents(query)
+
+    # Store images for recipes that have image URLs but no stored images
+    for recipe in recipes:
+        if (recipe.get("previewImageUrlTemplate") and 
+            not recipe.get("stored_image_url")):
+            try:
+                recipe_id = str(recipe["_id"])
+                image_data = await image_storage_service.store_image(
+                    recipe_id, recipe["previewImageUrlTemplate"]
+                )
+                
+                # Update recipe with stored image info
+                await db[collection].update_one(
+                    {"_id": ObjectId(recipe_id)},
+                    {"$set": image_data}
+                )
+                
+                # Update the recipe dict with stored image info
+                recipe.update(image_data)
+            except Exception as e:
+                # Log error but don't fail recipe retrieval
+                print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
 
     return {
         "recipes": serialize_recipes(recipes),
