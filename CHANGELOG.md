@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-11-05
+
+### Added
+- **Categories system** for organizing and grouping tags with hierarchy support
+- **Tag image support** with 180+ tag images stored in frontend public directory
+- **Tag exclusion filtering** in recipe recommendations via `exclude_tags` parameter
+- **Category-based tag organization** in frontend with collapsible sections
+
+### Changed
+- **BREAKING**: Removed permanent image storage system and related endpoints
+- **BREAKING**: Recipe model rating structure changed from flat fields to nested `rating` object with `rating` and `numVotes` properties
+- Recipe recommendations filtering now supports both inclusion (`tags`) and exclusion (`exclude_tags`) of tags
+- Tag store now fetches and manages tag images from public directory
+- Enhanced recommendation filters UI with category-based tag grouping
+- Frontend components refactored for better state management and performance
+
+### Removed
+- Image storage service and hierarchical directory system
+- `/api/v1/images` endpoints
+- Recipe image storage fields (`storedImagePath`, `storedImageUrl`, `imageStoredAt`)
+
+### Technical Details
+- Categories API endpoint at `/api/v1/categories` for retrieving tag categories
+- Tag images served from `frontend/public/tag-images/` directory
+- Improved TypeScript typing across frontend services and stores
+- Simplified recipe model by removing image storage complexity
+
 ## [1.1.0] - 2025-07-21
 
 ### Added

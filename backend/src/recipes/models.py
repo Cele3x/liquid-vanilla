@@ -5,6 +5,10 @@ from bson import ObjectId
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
 
+class Rating(BaseModel):
+    rating: Optional[float] = Field(ge=0.0, le=5.0, default=None)
+    numVotes: Optional[int] = Field(ge=0, default=None)
+
 class Ingredient(BaseModel):
     ingredientId: Optional[PyObjectId] = None
     unitId: Optional[PyObjectId] = None
@@ -17,7 +21,7 @@ class IngredientGroup(BaseModel):
 class Recipe(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     title: str = Field(min_length=2, max_length=100)
-    rating: Optional[float] = Field(ge=0.0, le=5.0, default=None)
+    rating: Optional[Rating] = None
     sourceUrl: Optional[str] = Field(min_length=10, max_length=2000, default=None)
     previewImageUrlTemplate: Optional[str] = Field(min_length=10, max_length=2000, default=None)
     cachedImagePath: Optional[str] = Field(default=None)
@@ -37,11 +41,11 @@ class Recipe(BaseModel):
     source: Optional[str] = None
     sourceId: Optional[str] = None
     sourceRating: Optional[float] = None
-    sourceRatingVotes: Optional[int] = None
+    # Note: sourceRatingVotes deprecated in favor of nested rating.numVotes structure
     sourceViewCount: Optional[int] = None
     status: Optional[str] = None
     subtitle: Optional[str] = None
-    tagIds: Optional[List[PyObjectId]] = None
+    tags: Optional[List[PyObjectId]] = None
     totalTime: Optional[int] = None
     userId: Optional[PyObjectId] = None
 
@@ -66,10 +70,10 @@ class Recipe(BaseModel):
                 "servings": 4,
                 "source": "Chefkoch",
                 "sourceRating": 4.7,
-                "sourceRatingVotes": 1000,
+                "rating": {"rating": 4.7, "numVotes": 1000},
                 "status": "active",
                 "subtitle": "Quick and delicious",
-                "tagIds": ["6628c6369b0fefc37a4de90d", "6628c6369b0fefc37a4de90d"],
+                "tags": ["6628c6369b0fefc37a4de90d", "6628c6369b0fefc37a4de90d"],
                 "ingredientGroups": [
                     {
                         "header": "Für das Gemüse:",

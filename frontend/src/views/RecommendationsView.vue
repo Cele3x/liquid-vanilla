@@ -7,18 +7,30 @@ import RecommendationFilters from '@/components/RecommendationFilters.vue'
 interface Recipe {
   id: string
   title: string
-  rating: number | null
-  sourceRatingVotes: number | null
+  rating: {
+    rating: number | null
+    numVotes: number | null
+  } | null
   previewImageUrlTemplate: string | null
   cachedImageUrl?: string | null
   sourceUrl: string
-  tagIds: string[]
+  tags: string[]
 }
 
 const recommendations = ref<Recipe[]>([])
 const loading = ref(false)
 const lockedRecipeIds = ref<Set<string>>(new Set())
 const currentFilters = ref<any>(null)
+
+// Helper function to safely get a valid rating value from nested structure
+const getSafeRating = (rating: any): number => {
+  if (!rating || typeof rating !== 'object' || !('rating' in rating)) {
+    return 0
+  }
+  
+  const ratingValue = Number(rating.rating)
+  return isNaN(ratingValue) || ratingValue < 0 || ratingValue > 5 ? 0 : ratingValue
+}
 
 const fetchRecommendations = async () => {
   loading.value = true
@@ -34,7 +46,7 @@ const fetchRecommendations = async () => {
     const response = await recipeService.getRecommendations(lockedIds, currentFilters.value)
     recommendations.value = response.recommendations
   } catch (error) {
-    console.error('Error fetching recommendations:', error)
+    console.error('Fehler beim Laden der Empfehlungen:', error)
     // On error, restore locked recipes at least
     recommendations.value = lockedRecipes
   } finally {
@@ -77,16 +89,6 @@ const loadingPlaceholders = computed(() => {
       <RecommendationFilters @filters-changed="onFiltersChanged" />
     </div>
 
-    <div class="text-center mb-8">
-      <button
-        @click="fetchRecommendations"
-        :disabled="loading || lockedRecipeIds.size >= 8"
-        class="bg-gold-light dark:bg-gold hover:bg-gold-hover-light dark:hover:bg-gold-hover text-white font-montserrat font-medium py-3 px-6 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {{ loading ? 'Loading...' : 'Get New Recommendations' }}
-      </button>
-    </div>
-
     <div
       v-if="recommendations.length || loadingPlaceholders > 0"
       class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
@@ -107,7 +109,7 @@ const loadingPlaceholders = computed(() => {
               ? 'bg-gold-light dark:bg-gold text-white shadow-lg hover:bg-gold-hover-light dark:hover:bg-gold-hover'
               : 'bg-black bg-opacity-40 text-white hover:bg-opacity-70 hover:bg-gold-light dark:hover:bg-gold'
           "
-          :title="isLocked(recipe.id) ? 'Unlock recipe' : 'Lock recipe'"
+          :title="isLocked(recipe.id) ? 'Rezept entsperren' : 'Rezept sperren'"
         >
           <svg
             v-if="isLocked(recipe.id)"
@@ -154,25 +156,6 @@ const loadingPlaceholders = computed(() => {
 
           <!-- Recipe Subsection -->
           <div class="p-4 min-h-[120px]">
-            <!-- Recipe Tags -->
-            <div
-              v-if="recipe.tagIds?.length"
-              class="flex items-center justify-center flex-wrap gap-3 mb-3"
-            >
-              <span
-                v-for="tag in recipe.tagIds"
-                :key="tag"
-                class="text-gold-light dark:text-gold text-xs font-montserrat font-medium tracking-wider hover:text-gold-hover-light dark:hover:text-gold-hover transition-colors duration-200"
-              >
-                {{ tag.toUpperCase() }}
-              </span>
-              <span
-                v-if="recipe.tagIds.length > 1"
-                class="text-gold-light dark:text-gold text-[8px]"
-                >◆</span
-              >
-            </div>
-
             <!-- Recipe Title -->
             <h3
               class="text-dark dark:text-light font-raleway text-lg font-normal tracking-wide text-center mb-3"
@@ -187,14 +170,14 @@ const loadingPlaceholders = computed(() => {
             >
               <div class="tracking-wider text-sm flex items-center gap-2">
                 <div class="flex">
-                  <span v-for="n in Math.floor(recipe.rating)" :key="n">★</span>
-                  <span v-if="recipe.rating % 1 >= 0.5" class="opacity-40">★</span>
+                  <span v-for="n in Math.floor(getSafeRating(recipe.rating))" :key="n">★</span>
+                  <span v-if="getSafeRating(recipe.rating) % 1 >= 0.5" class="opacity-40">★</span>
                 </div>
-                <span class="font-montserrat text-xs">{{ recipe.rating.toFixed(1) }}</span>
+                <span class="font-montserrat text-xs">{{ getSafeRating(recipe.rating).toFixed(1) }}</span>
               </div>
               <span class="text-[8px] text-gold-light dark:text-gold">◆</span>
               <span class="font-montserrat text-xs font-medium tracking-wider">
-                {{ recipe.sourceRatingVotes || 0 }} VOTES
+                {{ recipe.rating?.numVotes || 0 }} BEWERTUNGEN
               </span>
             </div>
           </div>
@@ -245,7 +228,19 @@ const loadingPlaceholders = computed(() => {
       v-if="!loading && !recommendations.length && loadingPlaceholders === 0"
       class="text-center mt-8"
     >
-      <p class="text-dark dark:text-light text-lg">No recommendations found. Try again later!</p>
+      <p class="text-dark dark:text-light text-lg">
+        Keine Empfehlungen gefunden. Versuchen Sie es später noch einmal!
+      </p>
+    </div>
+
+    <div class="text-center mt-8">
+      <button
+        @click="fetchRecommendations"
+        :disabled="loading || lockedRecipeIds.size >= 8"
+        class="bg-gold-light dark:bg-gold hover:bg-gold-hover-light dark:hover:bg-gold-hover text-white font-montserrat font-medium py-3 px-6 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {{ loading ? 'Lädt...' : 'Neue Empfehlungen holen' }}
+      </button>
     </div>
   </div>
 </template>

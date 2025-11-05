@@ -5,13 +5,15 @@ import { recipeService } from '@/services/recipeService'
 interface Recipe {
   id: string
   title: string
-  rating: number
-  sourceRatingVotes: number
+  rating: {
+    rating: number | null
+    numVotes: number | null
+  } | null
   previewImageUrlTemplate: string
   cachedImageUrl?: string
   defaultImageUrl: string
   sourceUrl: string
-  tagIds: string[]
+  tags: string[]
 }
 
 export const useRecipeStore = defineStore('recipe', {
@@ -51,7 +53,7 @@ export const useRecipeStore = defineStore('recipe', {
           this.allLoaded = true
         }
       } catch (error) {
-        console.error('Failed to fetch recipes:', error)
+        console.error('Fehler beim Laden der Rezepte:', error)
       } finally {
         this.loading = false
       }

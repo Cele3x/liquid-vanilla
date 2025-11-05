@@ -12,6 +12,19 @@ RECIPE_URL = f"{settings.BASE_URL}/recipes"
 class TestRecipeRecommendations:
     """Test suite for recipe recommendations functionality."""
 
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self, client):
+        self.created_recipe_ids = []
+        yield
+        for recipe_id in self.created_recipe_ids:
+            client.delete(f"{RECIPE_URL}/{recipe_id}")
+
+    def create_recipe(self, client, recipe):
+        response = client.post(RECIPE_URL, json=recipe)
+        if response.status_code == 201:
+            self.created_recipe_ids.append(response.json())
+        return response
+
     @pytest.fixture
     def recipes_with_images(self):
         """Create test recipes with image URLs."""
@@ -43,7 +56,7 @@ class TestRecipeRecommendations:
         """Test that recommendations only return recipes with images."""
         # Create recipes with and without images
         for recipe in recipes_with_images + recipes_without_images:
-            response = client.post(RECIPE_URL, json=recipe)
+            response = self.create_recipe(client, recipe)
             assert response.status_code == 201
 
         # Get recommendations
@@ -75,7 +88,7 @@ class TestRecipeRecommendations:
         ]
         
         for recipe in extended_recipes:
-            response = client.post(RECIPE_URL, json=recipe)
+            response = self.create_recipe(client, recipe)
             assert response.status_code == 201
 
         # Get recommendations
@@ -103,7 +116,7 @@ class TestRecipeRecommendations:
         ]
         
         for recipe in recipes:
-            response = client.post(RECIPE_URL, json=recipe)
+            response = self.create_recipe(client, recipe)
             assert response.status_code == 201
 
         # Get recommendations
@@ -132,7 +145,7 @@ class TestRecipeRecommendations:
         ]
         
         for recipe in recipes:
-            response = client.post(RECIPE_URL, json=recipe)
+            response = self.create_recipe(client, recipe)
             assert response.status_code == 201
 
         # Get recommendations
@@ -149,7 +162,7 @@ class TestRecipeRecommendations:
         """Test that recommendations response has correct structure."""
         # Create recipes
         for recipe in recipes_with_images:
-            response = client.post(RECIPE_URL, json=recipe)
+            response = self.create_recipe(client, recipe)
             assert response.status_code == 201
 
         # Get recommendations
@@ -188,7 +201,7 @@ class TestRecipeRecommendations:
         ]
         
         for recipe in extended_recipes:
-            response = client.post(RECIPE_URL, json=recipe)
+            response = self.create_recipe(client, recipe)
             assert response.status_code == 201
 
         # Get recommendations multiple times
@@ -217,11 +230,9 @@ class TestRecipeRecommendations:
     def test_get_recommendations_with_locked_recipes(self, client, recipes_with_images):
         """Test that locked recipes are preserved when getting new recommendations."""
         # Create recipes with images
-        created_recipe_ids = []
         for recipe in recipes_with_images:
-            response = client.post(RECIPE_URL, json=recipe)
+            response = self.create_recipe(client, recipe)
             assert response.status_code == 201
-            created_recipe_ids.append(response.text.strip('"'))
 
         # Get initial recommendations
         response = client.get(f"{RECIPE_URL}/recommendations")
@@ -251,7 +262,7 @@ class TestRecipeRecommendations:
         """Test recommendations with invalid locked IDs."""
         # Create recipes with images
         for recipe in recipes_with_images:
-            response = client.post(RECIPE_URL, json=recipe)
+            response = self.create_recipe(client, recipe)
             assert response.status_code == 201
 
         # Test with invalid ObjectId

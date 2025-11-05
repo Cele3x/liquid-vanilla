@@ -44,6 +44,8 @@ body {
   min-height: 100vh;
   font-family: 'Montserrat', sans-serif;
   line-height: 1.6;
+  /* Disable native pull-to-refresh on mobile devices */
+  overscroll-behavior-y: contain;
 }
 
 /* Ensure proper responsive font scaling */

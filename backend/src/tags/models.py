@@ -8,3 +8,5 @@ PyObjectId = Annotated[str, BeforeValidator(str)]
 class Tag(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str = Field(min_length=2, max_length=100)
+    categoryId: Optional[PyObjectId] = Field(default=None)
+    isEssential: bool = Field(default=True)

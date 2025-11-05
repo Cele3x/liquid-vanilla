@@ -8,6 +8,16 @@ const recipeStore = useRecipeStore()
 // Using storeToRefs to maintain reactivity
 const { recipes, loading, allLoaded } = storeToRefs(recipeStore)
 
+// Helper function to safely get a valid rating value from nested structure
+const getSafeRating = (rating: any): number => {
+  if (!rating || typeof rating !== 'object' || !('rating' in rating)) {
+    return 0
+  }
+  
+  const ratingValue = Number(rating.rating)
+  return isNaN(ratingValue) || ratingValue < 0 || ratingValue > 5 ? 0 : ratingValue
+}
+
 const handleScroll = () => {
   const scrollPosition = window.innerHeight + window.scrollY
   const bodyHeight = document.body.offsetHeight
@@ -56,25 +66,6 @@ onUnmounted(() => {
 
           <!-- Recipe Subsection -->
           <div class="p-4">
-            <!-- Recipe Tags -->
-            <div
-              v-if="recipe.tagIds?.length"
-              class="flex items-center justify-center flex-wrap gap-3 mb-3"
-            >
-              <span
-                v-for="tag in recipe.tagIds"
-                :key="tag"
-                class="text-gold-light dark:text-gold text-xs font-montserrat font-medium tracking-wider hover:text-gold-hover-light dark:hover:text-gold-hover transition-colors duration-200"
-              >
-                {{ tag.toUpperCase() }}
-              </span>
-              <span
-                v-if="recipe.tagIds.length > 1"
-                class="text-gold-light dark:text-gold text-[8px]"
-                >◆</span
-              >
-            </div>
-
             <!-- Recipe Title -->
             <h3
               class="text-dark dark:text-light font-raleway text-lg font-normal tracking-wide text-center mb-3"
@@ -88,14 +79,14 @@ onUnmounted(() => {
             >
               <div class="tracking-wider text-sm flex items-center gap-2">
                 <div class="flex">
-                  <span v-for="n in Math.floor(recipe.rating)" :key="n">★</span>
-                  <span v-if="recipe.rating % 1 >= 0.5" class="opacity-40">★</span>
+                  <span v-for="n in Math.floor(getSafeRating(recipe.rating))" :key="n">★</span>
+                  <span v-if="getSafeRating(recipe.rating) % 1 >= 0.5" class="opacity-40">★</span>
                 </div>
-                <span class="font-montserrat text-xs">{{ recipe.rating.toFixed(1) }}</span>
+                <span class="font-montserrat text-xs">{{ getSafeRating(recipe.rating).toFixed(1) }}</span>
               </div>
               <span class="text-[8px] text-gold-light dark:text-gold">◆</span>
               <span class="font-montserrat text-xs font-medium tracking-wider">
-                {{ recipe.sourceRatingVotes || 0 }} VOTES
+                {{ recipe.rating?.numVotes || 0 }} BEWERTUNGEN
               </span>
             </div>
           </div>
@@ -103,10 +94,10 @@ onUnmounted(() => {
       </div>
     </div>
     <div v-if="loading" class="text-center mt-4">
-      <p class="text-dark dark:text-light">Loading more recipes...</p>
+      <p class="text-dark dark:text-light">Lade weitere Rezepte...</p>
     </div>
     <div v-if="allLoaded" class="text-center mt-4">
-      <p class="text-dark dark:text-light">All recipes loaded</p>
+      <p class="text-dark dark:text-light">Alle Rezepte geladen</p>
     </div>
     <div class="h-screen"></div>
   </div>

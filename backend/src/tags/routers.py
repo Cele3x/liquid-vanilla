@@ -12,14 +12,19 @@ router = APIRouter(
 collection = "tags"
 
 @router.get("/", status_code=status.HTTP_200_OK)
-async def get_tags(db: AsyncIOMotorClient = Depends(get_db)) -> List[Dict[str, Any]]:
+async def get_tags(
+    essential_only: bool = False,
+    db: AsyncIOMotorClient = Depends(get_db)
+) -> List[Dict[str, Any]]:
     """
-    Retrieve all tags.
+    Retrieve all tags or only essential tags.
 
+    @param essential_only: If True, return only essential tags
     @param db: Database connection
     @return: List of tags
     """
-    tags = await db[collection].find().sort({ "usageCount": -1 }).to_list(None)
+    query = {"isEssential": True} if essential_only else {}
+    tags = await db[collection].find(query).sort({ "usageCount": -1 }).to_list(None)
     return serialize_tags(tags)
 
 @router.post("/", status_code=status.HTTP_201_CREATED)

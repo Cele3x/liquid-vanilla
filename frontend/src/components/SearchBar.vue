@@ -32,7 +32,7 @@ const handleSearch = async () => {
     try {
       recipeStore.setSearchQuery(searchQuery.value.trim())
     } catch (error) {
-      console.error('Failed to search recipes:', error)
+      console.error('Fehler beim Suchen von Rezepten:', error)
     }
   }
 }
@@ -74,7 +74,7 @@ onUnmounted(() => {
         name="search"
         id="search"
         class="w-full h-9 pl-3 pr-10 border border-secondary-light dark:border-secondary leading-5 bg-secondary-light dark:bg-secondary text-dark dark:text-light placeholder-accent-light dark:placeholder-accent focus:outline-none focus:ring-1 focus:ring-accent-light dark:focus:ring-accent focus:border-accent-light dark:focus:border-accent sm:text-sm"
-        placeholder="Search"
+        placeholder="Suchen"
       />
       <button
         v-if="searchQuery"

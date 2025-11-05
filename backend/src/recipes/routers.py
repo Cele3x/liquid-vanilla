@@ -9,7 +9,6 @@ from .models import Recipe
 from .schemas import serialize_recipe, serialize_recipes
 from ..database import get_db
 from ..utils import convert_object_ids
-from ..images.service import image_storage_service
 
 
 router = APIRouter(
@@ -27,7 +26,8 @@ async def get_recipe_recommendations(
         min_votes: Optional[int] = Query(100, description="Minimum number of votes", ge=0),
         max_votes: Optional[int] = Query(None, description="Maximum number of votes", ge=0),
         has_image: Optional[bool] = Query(True, description="Only recipes with images"),
-        tag_ids: Optional[str] = Query(None, description="Comma-separated list of tag IDs"),
+        tags: Optional[str] = Query(None, description="Comma-separated list of tag IDs to include"),
+        exclude_tags: Optional[str] = Query(None, description="Comma-separated list of tag IDs to exclude"),
         difficulty: Optional[str] = Query(None, description="Comma-separated difficulty levels (1,2,3)"),
         min_cooking_time: Optional[int] = Query(None, description="Minimum cooking time in minutes", ge=0),
         max_cooking_time: Optional[int] = Query(None, description="Maximum cooking time in minutes", ge=0),
@@ -46,7 +46,8 @@ async def get_recipe_recommendations(
     :param min_votes: Minimum number of votes (default: 100)
     :param max_votes: Maximum number of votes
     :param has_image: Only include recipes with images (default: True)
-    :param tag_ids: Comma-separated list of tag IDs to filter by
+    :param tags: Comma-separated list of tag IDs to include
+    :param exclude_tags: Comma-separated list of tag IDs to exclude
     :param difficulty: Comma-separated difficulty levels (1,2,3)
     :param min_cooking_time: Minimum cooking time in minutes
     :param max_cooking_time: Maximum cooking time in minutes
@@ -92,28 +93,44 @@ async def get_recipe_recommendations(
             if min_rating is not None and min_rating > 0:
                 # Only apply rating filter if min_rating is above 0
                 # This allows null ratings to pass through when min_rating is 0
-                filter_query["rating"] = {"$gte": min_rating}
+                filter_query["rating.rating"] = {"$gte": min_rating}
             
-            # Votes filter (using sourceRatingVotes, handle null values)
+            # Votes filter (using rating.numVotes)
             if min_votes is not None and min_votes > 0:
                 # Only apply votes filter if min_votes is above 0
-                filter_query["sourceRatingVotes"] = {"$gte": min_votes}
+                filter_query["rating.numVotes"] = {"$gte": min_votes}
             if max_votes is not None:
-                if "sourceRatingVotes" in filter_query:
-                    filter_query["sourceRatingVotes"]["$lte"] = max_votes
+                if "rating.numVotes" in filter_query:
+                    filter_query["rating.numVotes"]["$lte"] = max_votes
                 else:
-                    filter_query["sourceRatingVotes"] = {"$lte": max_votes}
+                    filter_query["rating.numVotes"] = {"$lte": max_votes}
             
             # Image filter
             if has_image:
                 filter_query["previewImageUrlTemplate"] = {"$exists": True, "$ne": "", "$ne": None}
             
-            # Tags filter
-            if tag_ids:
-                tag_id_list = [id.strip() for id in tag_ids.split(",") if id.strip()]
+            # Include tags filter
+            if tags:
+                tag_id_list = [id.strip() for id in tags.split(",") if id.strip()]
                 valid_tag_ids = [ObjectId(id) for id in tag_id_list if ObjectId.is_valid(id)]
                 if valid_tag_ids:
                     filter_query["tags"] = {"$in": valid_tag_ids}
+            
+            # Exclude tags filter
+            if exclude_tags:
+                exclude_tag_id_list = [id.strip() for id in exclude_tags.split(",") if id.strip()]
+                valid_exclude_tag_ids = [ObjectId(id) for id in exclude_tag_id_list if ObjectId.is_valid(id)]
+                if valid_exclude_tag_ids:
+                    if "tags" in filter_query:
+                        # If we already have an include filter, combine with exclude
+                        filter_query["$and"] = [
+                            {"tags": filter_query["tags"]},
+                            {"tags": {"$nin": valid_exclude_tag_ids}}
+                        ]
+                        del filter_query["tags"]
+                    else:
+                        # Only exclude filter
+                        filter_query["tags"] = {"$nin": valid_exclude_tag_ids}
             
             # Difficulty filter
             if difficulty:
@@ -157,27 +174,6 @@ async def get_recipe_recommendations(
         # Combine locked and new recipes
         all_recommendations = locked_recipes + new_recipes
         
-        # Store images for recipes that have image URLs but no stored images
-        for recipe in all_recommendations:
-            if (recipe.get("previewImageUrlTemplate") and 
-                not recipe.get("stored_image_url")):
-                try:
-                    recipe_id = str(recipe["_id"])
-                    image_data = await image_storage_service.store_image(
-                        recipe_id, recipe["previewImageUrlTemplate"]
-                    )
-                    
-                    # Update recipe with stored image info
-                    await db[collection].update_one(
-                        {"_id": ObjectId(recipe_id)},
-                        {"$set": image_data}
-                    )
-                    
-                    # Update the recipe dict with stored image info
-                    recipe.update(image_data)
-                except Exception as e:
-                    # Log error but don't fail recipe retrieval
-                    print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
         
         return {
             "recommendations": serialize_recipes(all_recommendations)
@@ -192,27 +188,6 @@ async def get_recipe_recommendations(
                 "previewImageUrlTemplate": {"$exists": True, "$ne": "", "$ne": None}
             }).limit(8).to_list(8)
             
-            # Store images for fallback recipes that have image URLs but no stored images
-            for recipe in recommendations:
-                if (recipe.get("previewImageUrlTemplate") and 
-                    not recipe.get("stored_image_url")):
-                    try:
-                        recipe_id = str(recipe["_id"])
-                        image_data = await image_storage_service.store_image(
-                            recipe_id, recipe["previewImageUrlTemplate"]
-                        )
-                        
-                        # Update recipe with stored image info
-                        await db[collection].update_one(
-                            {"_id": ObjectId(recipe_id)},
-                            {"$set": image_data}
-                        )
-                        
-                        # Update the recipe dict with stored image info
-                        recipe.update(image_data)
-                    except Exception as e:
-                        # Log error but don't fail recipe retrieval
-                        print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
             
             return {
                 "recommendations": serialize_recipes(recommendations)
@@ -253,7 +228,7 @@ async def get_recipes(
     if tags:
         try:
             tag_ids = [ObjectId(tag.strip()) for tag in tags if tag.strip()]
-            query["tagIds"] = {"$in": tag_ids}
+            query["tags"] = {"$in": tag_ids}
         except bson_errors.InvalidId as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -263,31 +238,24 @@ async def get_recipes(
     if search:
         query["title"] = {"$regex": search, "$options": "i"}
 
-    recipes = await db[collection].find(query).skip(skip).limit(page_size).sort("rating", -1).to_list(page_size)
+    # Add minimum votes filter (at least 50 votes)
+    query["rating.numVotes"] = {"$gte": 50}
+
+    # Use aggregation pipeline to sort by nested rating fields
+    pipeline = [
+        {"$match": query},
+        {"$addFields": {
+            "rating_sort": {"$ifNull": ["$rating.rating", -1]}  # Only nested structure
+        }},
+        {"$sort": {"rating_sort": -1, "_id": 1}},
+        {"$skip": skip},
+        {"$limit": page_size}
+    ]
+    
+    recipes = await db[collection].aggregate(pipeline).to_list(page_size)
     print(f"db[${collection}].find({query}).skip({skip}).limit({page_size}).sort('rating', -1)")
     total = await db[collection].count_documents(query)
 
-    # Store images for recipes that have image URLs but no stored images
-    for recipe in recipes:
-        if (recipe.get("previewImageUrlTemplate") and 
-            not recipe.get("stored_image_url")):
-            try:
-                recipe_id = str(recipe["_id"])
-                image_data = await image_storage_service.store_image(
-                    recipe_id, recipe["previewImageUrlTemplate"]
-                )
-                
-                # Update recipe with stored image info
-                await db[collection].update_one(
-                    {"_id": ObjectId(recipe_id)},
-                    {"$set": image_data}
-                )
-                
-                # Update the recipe dict with stored image info
-                recipe.update(image_data)
-            except Exception as e:
-                # Log error but don't fail recipe retrieval
-                print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
 
     return {
         "recipes": serialize_recipes(recipes),
@@ -305,7 +273,7 @@ async def create_recipe(
         db: AsyncIOMotorClient = Depends(get_db)
 ) -> str:
     """
-    Creates a new recipe with converted ObjectIds and caches images.
+    Creates a new recipe with converted ObjectIds.
 
     @param recipe: Recipe model to create
     @param db: Database connection
@@ -315,7 +283,7 @@ async def create_recipe(
     try:
         recipe_dict = recipe.model_dump()
         fields_to_convert = [
-            "tagIds",
+            "tags",
             "userId",
             "ingredientGroups.ingredients.ingredientId",
             "ingredientGroups.ingredients.unitId"
@@ -327,21 +295,6 @@ async def create_recipe(
         if result.inserted_id:
             recipe_id = str(result.inserted_id)
             
-            # Store image permanently if image URL template exists
-            if recipe.previewImageUrlTemplate:
-                try:
-                    image_data = await image_storage_service.store_image(
-                        recipe_id, recipe.previewImageUrlTemplate
-                    )
-                    
-                    # Update recipe with stored image info
-                    await db[collection].update_one(
-                        {"_id": ObjectId(recipe_id)},
-                        {"$set": image_data}
-                    )
-                except Exception as e:
-                    # Log error but don't fail recipe creation
-                    print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
             
             return recipe_id
 
@@ -360,7 +313,7 @@ async def create_recipe(
 @router.get("/{recipe_id}", status_code=status.HTTP_200_OK)
 async def get_recipe(recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
     """
-    Get a single recipe by ID and cache its image if not already cached.
+    Get a single recipe by ID.
     
     :param recipe_id: Recipe ID
     :param db: Database connection
@@ -371,25 +324,6 @@ async def get_recipe(recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
     if not recipe:
         raise HTTPException(status_code=404, detail="Recipe not found")
     
-    # Store image if it exists but isn't stored yet
-    if (recipe.get("previewImageUrlTemplate") and 
-        not recipe.get("stored_image_url")):
-        try:
-            image_data = await image_storage_service.store_image(
-                recipe_id, recipe["previewImageUrlTemplate"]
-            )
-            
-            # Update recipe with stored image info
-            await db[collection].update_one(
-                {"_id": ObjectId(recipe_id)},
-                {"$set": image_data}
-            )
-            
-            # Update the recipe dict with stored image info
-            recipe.update(image_data)
-        except Exception as e:
-            # Log error but don't fail recipe retrieval
-            print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
     
     return serialize_recipe(recipe)
 

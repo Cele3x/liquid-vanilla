@@ -104,7 +104,6 @@ class TestRecipeSchemas:
         recipe_data = {
             "_id": "507f1f77bcf86cd799439011",
             "title": "Complete Test Recipe",
-            "rating": 4.5,
             "sourceUrl": "https://example.com/recipes/test",
             "previewImageUrlTemplate": "https://example.com/images/<format>/test.jpg",
             "cachedImagePath": "/cache/path/test_image.jpg",
@@ -121,8 +120,8 @@ class TestRecipeSchemas:
             "sourceRating": 4.7,
             "subtitle": "Complete test",
             "createdAt": datetime.now(UTC).isoformat(),
-            "sourceRatingVotes": 100,
-            "tagIds": ["tag1", "tag2"],
+            "rating": {"rating": 4.5, "numVotes": 100},
+            "tags": ["tag1", "tag2"],
             "difficulty": 2,
             "sourceViewCount": 1000,
             "totalTime": 50,
@@ -140,7 +139,7 @@ class TestRecipeSchemas:
             "cachedImagePath", "cachedImageUrl", "imageCachedAt",
             "additionalDescription", "preparationTime", "restingTime", "source",
             "sourceId", "status", "cookingTime", "servings", "sourceRating",
-            "subtitle", "createdAt", "sourceRatingVotes", "tagIds", "difficulty",
+            "subtitle", "createdAt", "rating", "tags", "difficulty",
             "sourceViewCount", "totalTime", "userId", "ingredientsText",
             "instructions", "miscellaneousText", "ingredientGroups"
         }

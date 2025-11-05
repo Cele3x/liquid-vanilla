@@ -16,12 +16,10 @@ describe('recipeService', () => {
 
   describe('getRecommendations', () => {
     it('should call API with correct tag parameters', async () => {
-      const mockResponse = { 
-        data: { 
-          recommendations: [
-            { id: '1', title: 'Test Recipe', rating: 4.5, sourceRatingVotes: 100 }
-          ] 
-        } 
+      const mockResponse = {
+        data: {
+          recommendations: [{ id: '1', title: 'Test Recipe', rating: { rating: 4.5, numVotes: 100 } }]
+        }
       }
       vi.mocked(api.get).mockResolvedValue(mockResponse)
 
@@ -29,7 +27,7 @@ describe('recipeService', () => {
       const filters = {
         minRating: 4.0,
         minVotes: 100,
-        tagIds: ['6628c62d9b0fefc37a4de8d9', '6628c62d9b0fefc37a4de8da'],
+        tags: ['6628c62d9b0fefc37a4de8d9', '6628c62d9b0fefc37a4de8da'],
         hasImage: true,
         difficulty: [1, 2, 3]
       }
@@ -42,33 +40,33 @@ describe('recipeService', () => {
           locked_ids: 'locked1,locked2',
           min_rating: 4.0,
           min_votes: 100,
-          tag_ids: '6628c62d9b0fefc37a4de8d9,6628c62d9b0fefc37a4de8da',
+          tags: '6628c62d9b0fefc37a4de8d9,6628c62d9b0fefc37a4de8da',
           has_image: true,
           difficulty: '1,2,3'
         }
       })
     })
 
-    it('should not send tag_ids parameter when no tags selected', async () => {
+    it('should not send tags parameter when no tags selected', async () => {
       const mockResponse = { data: { recommendations: [] } }
       vi.mocked(api.get).mockResolvedValue(mockResponse)
 
       const filters = {
         minRating: 4.0,
         minVotes: 100,
-        tagIds: [], // Empty array
+        tags: [], // Empty array
         hasImage: true
       }
 
       await recipeService.getRecommendations([], filters)
 
-      // Verify API was called without tag_ids parameter
+      // Verify API was called without tags parameter
       expect(api.get).toHaveBeenCalledWith('/recipes/recommendations', {
         params: {
           min_rating: 4.0,
           min_votes: 100,
           has_image: true
-          // tag_ids should not be present
+          // tags should not be present
         }
       })
     })
@@ -78,7 +76,7 @@ describe('recipeService', () => {
       vi.mocked(api.get).mockResolvedValue(mockResponse)
 
       const filters = {
-        tagIds: ['6628c62d9b0fefc37a4de8d9'] // Single tag
+        tags: ['6628c62d9b0fefc37a4de8d9'] // Single tag
       }
 
       await recipeService.getRecommendations([], filters)
@@ -86,28 +84,10 @@ describe('recipeService', () => {
       // Verify single tag is sent correctly (no trailing comma)
       expect(api.get).toHaveBeenCalledWith('/recipes/recommendations', {
         params: {
-          tag_ids: '6628c62d9b0fefc37a4de8d9'
+          tags: '6628c62d9b0fefc37a4de8d9'
         }
       })
     })
 
-    it('should log API parameters for debugging', async () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-      const mockResponse = { data: { recommendations: [] } }
-      vi.mocked(api.get).mockResolvedValue(mockResponse)
-
-      const filters = {
-        tagIds: ['6628c62d9b0fefc37a4de8d9']
-      }
-
-      await recipeService.getRecommendations([], filters)
-
-      // Verify console.log was called with API parameters
-      expect(consoleSpy).toHaveBeenCalledWith('API params being sent:', {
-        tag_ids: '6628c62d9b0fefc37a4de8d9'
-      })
-
-      consoleSpy.mockRestore()
-    })
   })
 })

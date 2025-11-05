@@ -37,16 +37,16 @@ const toggleSearch = () => {
             }"
           >
             <RouterLink
-              to="/about"
+              to="/"
               class="text-dark dark:text-light hover:text-accent-light dark:hover:text-accent transition-colors"
             >
-              About
+              Kategorien
             </RouterLink>
             <RouterLink
               to="/recommendations"
               class="text-dark dark:text-light hover:text-accent-light dark:hover:text-accent transition-colors"
             >
-              Recommendations
+              Empfehlungen
             </RouterLink>
             <!-- Add more navigation links here -->
           </div>
@@ -82,10 +82,10 @@ const toggleSearch = () => {
           <button
             @click="toggleDarkMode"
             class="p-1 text-accent-light dark:text-accent hover:text-dark dark:hover:text-light focus:outline-none h-9 w-9 flex items-center justify-center cursor-pointer"
-            :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
+            :title="isDarkMode ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln'"
           >
             <span class="sr-only">{{
-              isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'
+              isDarkMode ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln'
             }}</span>
             <!-- Sun icon for light mode -->
             <svg
@@ -125,7 +125,7 @@ const toggleSearch = () => {
           <button
             class="p-1 text-accent-light dark:text-accent hover:text-dark dark:hover:text-light focus:outline-none h-9 w-9 flex items-center justify-center cursor-pointer"
           >
-            <span class="sr-only">View notifications</span>
+            <span class="sr-only">Benachrichtigungen anzeigen</span>
             <svg
               class="h-6 w-6"
               xmlns="http://www.w3.org/2000/svg"
@@ -152,7 +152,7 @@ const toggleSearch = () => {
               aria-expanded="false"
               aria-haspopup="true"
             >
-              <span class="sr-only">Open user menu</span>
+              <span class="sr-only">Benutzermenü öffnen</span>
               <img
                 class="rounded-full object-cover object-center"
                 src="../assets/user.jpg"

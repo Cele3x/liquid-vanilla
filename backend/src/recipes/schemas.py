@@ -52,8 +52,8 @@ def serialize_recipe(recipe: dict) -> dict:
         "sourceRating": recipe.get("sourceRating"),
         "subtitle": recipe.get("subtitle"),
         "createdAt": recipe.get("createdAt"),
-        "sourceRatingVotes": recipe.get("sourceRatingVotes"),
-        "tagIds": serialize_tags(recipe.get("tagIds")),
+        "rating": recipe.get("rating"),  # Use nested rating structure
+        "tags": serialize_tags(recipe.get("tags")),
         "ingredientGroups": serialize_ingredient_groups(recipe.get("ingredientGroups")),
         "difficulty": recipe.get("difficulty"),
         "sourceViewCount": recipe.get("sourceViewCount"),
