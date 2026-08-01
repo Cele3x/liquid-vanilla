@@ -4,43 +4,48 @@ on:
   push:
     branches: [ master ]
 
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    runs-on: ubuntu-24.04
+    runs-on: [self-hosted, linux, x64]
+    timeout-minutes: 20
 
     steps:
-      - name: Install SSH key
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
-
-      - name: Deploy to server
-        env:
-          HOST: ${{ secrets.SERVER_HOST }}
-          USER: ${{ secrets.SERVER_USER }}
+      - name: Update repository
+        working-directory: /var/www/liquid-vanilla
         run: |
-          ssh -o StrictHostKeyChecking=no $USER@$HOST << 'EOF'
-            set -e
-            cd /var/www/liquid-vanilla
-          
-            # Update repository
-            git fetch origin master
-            git reset --hard origin/master
-          
-            # Backend setup
-            cd backend
-            python3 -m venv .venv
-            source .venv/bin/activate
-            pip install --upgrade pip
-            pip install -r requirements.txt
-          
-            # Frontend setup
-            cd ../frontend
-            rm -rf node_modules package-lock.json
-            npm install
-            npm run build
-          
-            # Restart services
-            sudo /usr/bin/systemctl reload nginx
-            sudo /usr/bin/supervisorctl restart liquid-vanilla
-          EOF
+          git fetch origin master
+          git reset --hard "$GITHUB_SHA"
+
+      - name: Install backend dependencies
+        working-directory: /var/www/liquid-vanilla/backend
+        run: |
+          python3 -m venv .venv
+          ./.venv/bin/pip install --upgrade pip
+          ./.venv/bin/pip install -r requirements.txt
+
+      - name: Build frontend
+        working-directory: /var/www/liquid-vanilla/frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Restart backend
+        run: sudo /usr/bin/supervisorctl restart liquid-vanilla
+
+      - name: Verify backend is responding
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS -m 3 http://127.0.0.1:8000/ >/dev/null; then
+              echo "Backend healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend did not come up"
+          sudo /usr/bin/supervisorctl status liquid-vanilla
+          tail -50 /var/log/liquid-vanilla-backend.err.log
+          exit 1
