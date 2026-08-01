@@ -20,19 +20,19 @@ class TestImageEndpoints:
         """Test serving a cached image that doesn't exist."""
         filename = "nonexistent_image.jpg"
         
-        with patch('src.images.routers.image_cache_service.get_cached_image_path') as mock_get_path:
+        with patch('src.images.routers.image_storage_service.get_stored_image_path') as mock_get_path:
             mock_get_path.return_value = None
             
             response = client.get(f"{IMAGE_URL}/{filename}")
             
             assert response.status_code == 404
-            assert response.json() == {"detail": "Image not found"}
+            assert response.json() == {"detail": "Bild nicht gefunden"}
 
     def test_image_cache_service_called(self, client):
         """Test that image cache service is called for image requests."""
         filename = "test_image.jpg"
         
-        with patch('src.images.routers.image_cache_service.get_cached_image_path') as mock_get_path:
+        with patch('src.images.routers.image_storage_service.get_stored_image_path') as mock_get_path:
             mock_get_path.return_value = None  # Simulate not found
             
             client.get(f"{IMAGE_URL}/{filename}")
@@ -52,7 +52,7 @@ class TestImageEndpoints:
         ]
         
         for filename, expected_path in test_cases:
-            with patch('src.images.routers.image_cache_service.get_cached_image_path') as mock_get_path:
+            with patch('src.images.routers.image_storage_service.get_stored_image_path') as mock_get_path:
                 mock_get_path.return_value = expected_path
                 
                 response = client.get(f"{IMAGE_URL}/{filename}")
@@ -71,7 +71,7 @@ class TestImageEndpoints:
         ]
         
         for url_filename, expected_param in special_filenames_and_expected:
-            with patch('src.images.routers.image_cache_service.get_cached_image_path') as mock_get_path:
+            with patch('src.images.routers.image_storage_service.get_stored_image_path') as mock_get_path:
                 mock_get_path.return_value = None
                 
                 response = client.get(f"{IMAGE_URL}/{url_filename}")
@@ -89,7 +89,7 @@ class TestImageEndpoints:
         ]
         
         for filename in malicious_filenames:
-            with patch('src.images.routers.image_cache_service.get_cached_image_path') as mock_get_path:
+            with patch('src.images.routers.image_storage_service.get_stored_image_path') as mock_get_path:
                 mock_get_path.return_value = None
                 
                 response = client.get(f"{IMAGE_URL}/{filename}")
@@ -104,7 +104,7 @@ class TestImageEndpoints:
         # we'll test the service call and verify the mapping would work
         filename = "test_image.jpg"
         
-        with patch('src.images.routers.image_cache_service.get_cached_image_path') as mock_get_path:
+        with patch('src.images.routers.image_storage_service.get_stored_image_path') as mock_get_path:
             mock_get_path.return_value = None
             
             response = client.get(f"{IMAGE_URL}/{filename}")
@@ -119,7 +119,7 @@ class TestImageEndpoints:
         # Test with a very long filename
         long_filename = "a" * 200 + ".jpg"
         
-        with patch('src.images.routers.image_cache_service.get_cached_image_path') as mock_get_path:
+        with patch('src.images.routers.image_storage_service.get_stored_image_path') as mock_get_path:
             mock_get_path.return_value = None
             
             response = client.get(f"{IMAGE_URL}/{long_filename}")
@@ -129,7 +129,7 @@ class TestImageEndpoints:
 
     def test_get_cached_image_empty_filename(self, client):
         """Test serving cached image with empty filename."""
-        with patch('src.images.routers.image_cache_service.get_cached_image_path') as mock_get_path:
+        with patch('src.images.routers.image_storage_service.get_stored_image_path') as mock_get_path:
             mock_get_path.return_value = None
             
             response = client.get(f"{IMAGE_URL}/")
@@ -143,7 +143,7 @@ class TestImageEndpoints:
         filename = "test_image.jpg"
         
         # Test GET (should work, return 404 since no image)
-        with patch('src.images.routers.image_cache_service.get_cached_image_path') as mock_get_path:
+        with patch('src.images.routers.image_storage_service.get_stored_image_path') as mock_get_path:
             mock_get_path.return_value = None
             
             get_response = client.get(f"{IMAGE_URL}/{filename}")
@@ -164,7 +164,7 @@ class TestImageEndpoints:
         # Test with a realistic hierarchical filename
         filename = "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6_crop-360x240.jpg"
         
-        with patch('src.images.routers.image_cache_service.get_cached_image_path') as mock_get_path:
+        with patch('src.images.routers.image_storage_service.get_stored_image_path') as mock_get_path:
             # When no path is returned, should get 404
             mock_get_path.return_value = None
                 

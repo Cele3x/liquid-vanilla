@@ -54,7 +54,7 @@ class TestRecipeImageIntegration:
         # Verify image caching was not called
         mock_image_storage_service.store_image.assert_not_called()
 
-    def test_get_recipe_behavior(self, client, recipe_with_image, mock_image_cache_service):
+    def test_get_recipe_behavior(self, client, recipe_with_image, mock_image_storage_service):
         """Test recipe retrieval behavior."""
         # Create recipe first
         create_response = client.post(RECIPE_URL, json=recipe_with_image)
