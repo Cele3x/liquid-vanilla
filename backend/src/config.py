@@ -9,7 +9,7 @@ load_dotenv(dotenv_path=env_path)
 
 class Settings:
     PROJECT_NAME: str = "Rezept-API"
-    PROJECT_VERSION: str = "1.2.0"
+    PROJECT_VERSION: str = "1.2.1"
     PROJECT_DESCRIPTION: str = "Eine RESTful-API zur Verwaltung von Rezepten"
 
     BASE_URL: str = "/api/v1"

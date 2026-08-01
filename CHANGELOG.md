@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-08-01
+
+### Fixed
+- **Recipe list is empty** - the recipe overview showed no recipes at all because the API served the rating in its stored form instead of a plain number, which broke rendering of every recipe card
+- **Recommendations returned nothing** - the rating filter never matched any recipe, so the recommendation view stayed empty
+- **Tag filtering and tag display** - recipes are filtered and shown with their tags again instead of returning no matches and empty tag lists
+- Recipes without a rating are now displayed instead of breaking the list
+- API errors such as an invalid tag ID now return their intended status code instead of a generic server error
+
 ## [1.2.0] - 2025-07-22
 
 ### Added
