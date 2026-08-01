@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-08-01
+
+### Added
+- **Hidden tags are summarised as a "+n" hint** on recipe cards, which names every tag of
+  the recipe on hover
+
+### Changed
+- **Recipe cards show only the tags that fit on one line** - cards listed every tag of a
+  recipe, wrapping over as many as four lines and leaving cards in the same row at wildly
+  different heights. The most used tags are kept, up to three and only as many as the line
+  holds, so long tag names are shown in full rather than cut off
+- Removed the decorative diamond that trailed the tag list on recipe cards
+
 ## [1.2.1] - 2026-08-01
 
 ### Changed

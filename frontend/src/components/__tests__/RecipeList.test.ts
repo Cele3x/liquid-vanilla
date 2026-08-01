@@ -54,6 +54,44 @@ describe('RecipeList', () => {
     expect(wrapper.text()).not.toContain('6628C62D9B0FEFC37A4DE8D9')
   })
 
+  it('caps the card at three tags so a grid row cannot grow uneven', async () => {
+    vi.mocked(tagService.getTags).mockResolvedValue([
+      { id: 't1', name: 'Reis', usage_count: 900 },
+      { id: 't2', name: 'Snack', usage_count: 800 },
+      { id: 't3', name: 'Kinder', usage_count: 700 },
+      { id: 't4', name: 'Camping', usage_count: 10 },
+      { id: 't5', name: 'Party', usage_count: 5 }
+    ])
+    vi.mocked(recipeService.getRecipes).mockResolvedValue({
+      recipes: [apiRecipe({ tagIds: ['t1', 't2', 't3', 't4', 't5'] })]
+    })
+
+    const wrapper = mount(RecipeList)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('REIS')
+    expect(wrapper.text()).not.toContain('CAMPING')
+    expect(wrapper.text()).toContain('+2')
+  })
+
+  it('names every tag in the overflow tooltip', async () => {
+    vi.mocked(tagService.getTags).mockResolvedValue([
+      { id: 't1', name: 'Hauptspeise', usage_count: 900 },
+      { id: 't2', name: 'Europa', usage_count: 800 },
+      { id: 't3', name: 'Vegetarisch', usage_count: 700 },
+      { id: 't4', name: 'Camping', usage_count: 10 }
+    ])
+    vi.mocked(recipeService.getRecipes).mockResolvedValue({
+      recipes: [apiRecipe({ tagIds: ['t1', 't2', 't3', 't4'] })]
+    })
+
+    const wrapper = mount(RecipeList)
+    await flushPromises()
+
+    const tooltip = wrapper.find('[title]').attributes('title')
+    expect(tooltip).toBe('Hauptspeise · Europa · Vegetarisch · Camping')
+  })
+
   it('hides tags that cannot be resolved instead of falling back to the id', async () => {
     vi.mocked(recipeService.getRecipes).mockResolvedValue({
       recipes: [apiRecipe({ tagIds: ['deadbeefdeadbeefdeadbeef'] })]

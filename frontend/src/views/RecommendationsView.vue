@@ -8,10 +8,8 @@ import { useTagStore } from '@/stores/tagStore'
 
 const tagStore = useTagStore()
 
-// Recipes carry tag ids; resolve them so cards show names instead of raw ids.
-const tagNames = computed(() => (tagIds: string[]) =>
-  tagIds.map((id) => tagStore.tagNameById(id)).filter((name): name is string => name !== null)
-)
+// Recipes carry tag ids; resolve them to the handful of names a card can show.
+const cardTags = computed(() => (tagIds: string[]) => tagStore.cardTags(tagIds))
 
 interface Recipe {
   id: string
@@ -266,21 +264,23 @@ onUnmounted(() => {
           <div class="p-4 min-h-[120px]">
             <!-- Recipe Tags -->
             <div
-              v-if="tagNames(recipe.tagIds ?? []).length"
-              class="flex items-center justify-center flex-wrap gap-3 mb-3"
+              v-if="cardTags(recipe.tagIds ?? []).names.length"
+              class="flex items-center justify-center flex-nowrap gap-3 mb-3"
             >
               <span
-                v-for="tag in tagNames(recipe.tagIds ?? [])"
+                v-for="tag in cardTags(recipe.tagIds ?? []).names"
                 :key="tag"
-                class="text-gold-light dark:text-gold text-xs font-montserrat font-medium tracking-wider hover:text-gold-hover-light dark:hover:text-gold-hover transition-colors duration-200"
+                class="text-gold-light dark:text-gold text-xs font-montserrat font-medium tracking-wider truncate hover:text-gold-hover-light dark:hover:text-gold-hover transition-colors duration-200"
               >
                 {{ tag.toUpperCase() }}
               </span>
               <span
-                v-if="tagNames(recipe.tagIds ?? []).length > 1"
-                class="text-gold-light dark:text-gold text-[8px]"
-                >◆</span
+                v-if="cardTags(recipe.tagIds ?? []).hiddenCount"
+                :title="cardTags(recipe.tagIds ?? []).allNames.join(' · ')"
+                class="text-gold-light/70 dark:text-gold/70 text-xs font-montserrat font-medium tracking-wider shrink-0 cursor-pointer hover:text-gold-hover-light dark:hover:text-gold-hover transition-colors duration-200"
               >
+                +{{ cardTags(recipe.tagIds ?? []).hiddenCount }}
+              </span>
             </div>
 
             <!-- Recipe Title -->
