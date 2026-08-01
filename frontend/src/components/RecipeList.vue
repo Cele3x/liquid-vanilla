@@ -1,12 +1,19 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRecipeStore } from '@/stores/recipeStore'
+import { useTagStore } from '@/stores/tagStore'
 import { storeToRefs } from 'pinia'
 import placeholderImageDark from '@/assets/recipe-dark.png'
 
 const recipeStore = useRecipeStore()
+const tagStore = useTagStore()
 // Using storeToRefs to maintain reactivity
 const { recipes, loading, allLoaded } = storeToRefs(recipeStore)
+
+// Recipes carry tag ids; resolve them so cards show names instead of raw ids.
+const tagNames = computed(() => (tagIds: string[]) =>
+  tagIds.map((id) => tagStore.tagNameById(id)).filter((name): name is string => name !== null)
+)
 
 const handleScroll = () => {
   const scrollPosition = window.innerHeight + window.scrollY
@@ -20,6 +27,7 @@ const handleScroll = () => {
 
 onMounted(() => {
   recipeStore.fetchRecipes()
+  tagStore.fetchTags()
   window.addEventListener('scroll', handleScroll)
 })
 
@@ -58,18 +66,18 @@ onUnmounted(() => {
           <div class="p-4">
             <!-- Recipe Tags -->
             <div
-              v-if="recipe.tagIds?.length"
+              v-if="tagNames(recipe.tagIds ?? []).length"
               class="flex items-center justify-center flex-wrap gap-3 mb-3"
             >
               <span
-                v-for="tag in recipe.tagIds"
+                v-for="tag in tagNames(recipe.tagIds ?? [])"
                 :key="tag"
                 class="text-gold-light dark:text-gold text-xs font-montserrat font-medium tracking-wider hover:text-gold-hover-light dark:hover:text-gold-hover transition-colors duration-200"
               >
                 {{ tag.toUpperCase() }}
               </span>
               <span
-                v-if="recipe.tagIds.length > 1"
+                v-if="tagNames(recipe.tagIds ?? []).length > 1"
                 class="text-gold-light dark:text-gold text-[8px]"
                 >◆</span
               >

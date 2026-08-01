@@ -14,6 +14,19 @@ export const useTagStore = defineStore('tag', {
     tags: [] as Tag[],
     loading: false
   }),
+  getters: {
+    /**
+     * Resolve a tag id to its display name.
+     *
+     * Recipes carry tag ids, so views need the loaded tag list to show names.
+     * Returns null when the tags have not loaded yet or the id is unknown, which
+     * lets callers hide the tag rather than render a raw object id.
+     */
+    tagNameById: (state) => {
+      const namesById = new Map(state.tags.map((tag) => [tag.id, tag.name]))
+      return (id: string): string | null => namesById.get(id) ?? null
+    }
+  },
   actions: {
     async fetchTags() {
       if (this.loading) return

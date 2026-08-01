@@ -3,10 +3,17 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import RecipeList from '../RecipeList.vue'
 import { recipeService } from '@/services/recipeService'
+import { tagService } from '@/services/tagService'
 
 vi.mock('@/services/recipeService', () => ({
   recipeService: {
     getRecipes: vi.fn()
+  }
+}))
+
+vi.mock('@/services/tagService', () => ({
+  tagService: {
+    getTags: vi.fn()
   }
 }))
 
@@ -31,6 +38,32 @@ describe('RecipeList', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.mocked(recipeService.getRecipes).mockReset()
+    vi.mocked(tagService.getTags).mockReset()
+    vi.mocked(tagService.getTags).mockResolvedValue([
+      { id: '6628c62d9b0fefc37a4de8d9', name: 'Hauptspeise', usage_count: 3 }
+    ])
+  })
+
+  it('shows tag names on the card, never the raw ids the API sends', async () => {
+    vi.mocked(recipeService.getRecipes).mockResolvedValue({ recipes: [apiRecipe()] })
+
+    const wrapper = mount(RecipeList)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('HAUPTSPEISE')
+    expect(wrapper.text()).not.toContain('6628C62D9B0FEFC37A4DE8D9')
+  })
+
+  it('hides tags that cannot be resolved instead of falling back to the id', async () => {
+    vi.mocked(recipeService.getRecipes).mockResolvedValue({
+      recipes: [apiRecipe({ tagIds: ['deadbeefdeadbeefdeadbeef'] })]
+    })
+
+    const wrapper = mount(RecipeList)
+    await flushPromises()
+
+    expect(wrapper.findAll('.recipe-item')).toHaveLength(1)
+    expect(wrapper.text().toUpperCase()).not.toContain('DEADBEEF')
   })
 
   it('renders a card per recipe returned by the API', async () => {

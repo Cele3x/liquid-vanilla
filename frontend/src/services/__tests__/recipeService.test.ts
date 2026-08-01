@@ -14,6 +14,27 @@ describe('recipeService', () => {
     vi.clearAllMocks()
   })
 
+  describe('getRecipes', () => {
+    it('should send every selected tag, not just the last one', async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: { recipes: [] } })
+
+      const tags = ['6628c62d9b0fefc37a4de8d9', '6628c62d9b0fefc37a4de8da']
+      await recipeService.getRecipes(1, 20, '', tags)
+
+      const [, config] = vi.mocked(api.get).mock.calls[0]
+      expect((config?.params as { tags?: string[] }).tags).toEqual(tags)
+    })
+
+    it('should omit the tags parameter when nothing is selected', async () => {
+      vi.mocked(api.get).mockResolvedValue({ data: { recipes: [] } })
+
+      await recipeService.getRecipes(1, 20, '', [])
+
+      const [, config] = vi.mocked(api.get).mock.calls[0]
+      expect((config?.params as { tags?: string[] }).tags).toBeUndefined()
+    })
+  })
+
   describe('getRecommendations', () => {
     it('should call API with correct tag parameters', async () => {
       const mockResponse = {
