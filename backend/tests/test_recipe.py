@@ -139,6 +139,30 @@ class TestRecipe:
             assert "cachedImageUrl" in recipe_data
             assert "imageCachedAt" in recipe_data
 
+        def test_get_recipes_flattens_embedded_rating(self, client, valid_recipe):
+            """Recipes stored with an embedded rating document are served as a plain float."""
+            recipe = {**valid_recipe, "title": "Embedded Rating Recipe", "rating": 4.25}
+            assert client.post(RECIPE_URL, json=recipe).status_code == 201
+
+            response = client.get(RECIPE_URL)
+            assert response.status_code == 200
+
+            [served] = response.json()["recipes"]
+            assert served["rating"] == 4.25
+            assert isinstance(served["rating"], float)
+
+        def test_get_recipes_without_rating_serves_null(self, client, valid_recipe):
+            """Recipes lacking a rating are served with a null rating rather than an error."""
+            recipe = {key: value for key, value in valid_recipe.items() if key != "rating"}
+            recipe["title"] = "Unrated Recipe"
+            assert client.post(RECIPE_URL, json=recipe).status_code == 201
+
+            response = client.get(RECIPE_URL)
+            assert response.status_code == 200
+
+            [served] = response.json()["recipes"]
+            assert served["rating"] is None
+
         def test_get_sorted_recipes_by_rating(self, client, valid_recipe):
             """Test retrieving recipes sorted by its rating as default (highest to lowest)."""
             created_recipes = []
@@ -231,12 +255,12 @@ class TestRecipe:
             tag1 = "6628c6289b0fefc37a4de8b6"
             tag2 = "6628c6289b0fefc37a4de8b7"
 
-            # Create recipes with different tags
+            # Create recipes with different tags (stored under the "tags" field)
             recipes = [
-                {**valid_recipe, "title": "Recipe with Tag1", "tagIds": [tag1]},
-                {**valid_recipe, "title": "Recipe with Tag2", "tagIds": [tag2]},
-                {**valid_recipe, "title": "Recipe with Both Tags", "tagIds": [tag1, tag2]},
-                {**valid_recipe, "title": "Recipe with No Tags", "tagIds": []}
+                {**valid_recipe, "title": "Recipe with Tag1", "tags": [tag1]},
+                {**valid_recipe, "title": "Recipe with Tag2", "tags": [tag2]},
+                {**valid_recipe, "title": "Recipe with Both Tags", "tags": [tag1, tag2]},
+                {**valid_recipe, "title": "Recipe with No Tags", "tags": []}
             ]
 
             for recipe in recipes:

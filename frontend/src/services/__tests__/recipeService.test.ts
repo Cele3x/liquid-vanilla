@@ -16,12 +16,10 @@ describe('recipeService', () => {
 
   describe('getRecommendations', () => {
     it('should call API with correct tag parameters', async () => {
-      const mockResponse = { 
-        data: { 
-          recommendations: [
-            { id: '1', title: 'Test Recipe', rating: 4.5, sourceRatingVotes: 100 }
-          ] 
-        } 
+      const mockResponse = {
+        data: {
+          recommendations: [{ id: '1', title: 'Test Recipe', rating: 4.5, sourceRatingVotes: 100 }]
+        }
       }
       vi.mocked(api.get).mockResolvedValue(mockResponse)
 
@@ -89,25 +87,6 @@ describe('recipeService', () => {
           tag_ids: '6628c62d9b0fefc37a4de8d9'
         }
       })
-    })
-
-    it('should log API parameters for debugging', async () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-      const mockResponse = { data: { recommendations: [] } }
-      vi.mocked(api.get).mockResolvedValue(mockResponse)
-
-      const filters = {
-        tagIds: ['6628c62d9b0fefc37a4de8d9']
-      }
-
-      await recipeService.getRecommendations([], filters)
-
-      // Verify console.log was called with API parameters
-      expect(consoleSpy).toHaveBeenCalledWith('API params being sent:', {
-        tag_ids: '6628c62d9b0fefc37a4de8d9'
-      })
-
-      consoleSpy.mockRestore()
     })
   })
 })

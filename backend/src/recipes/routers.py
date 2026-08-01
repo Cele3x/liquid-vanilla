@@ -6,7 +6,7 @@ from starlette import status
 from bson import ObjectId, errors as bson_errors
 
 from .models import Recipe
-from .schemas import serialize_recipe, serialize_recipes
+from .schemas import deserialize_rating, serialize_recipe, serialize_recipes
 from ..database import get_db
 from ..utils import convert_object_ids
 from ..images.service import image_storage_service
@@ -17,6 +17,39 @@ router = APIRouter(
     tags=["Recipes"],
 )
 collection = "recipes"
+
+# Recipes store their rating as an embedded document ({"rating": float, "numVotes": int}),
+# so queries and sorts have to address the nested field rather than "rating" itself.
+RATING_FIELD = "rating.rating"
+
+# Tag references live under "tags"; a few legacy documents use "tagIds" instead.
+TAG_FIELDS = ("tags", "tagIds")
+
+# Fields holding ObjectId references that arrive from clients as strings.
+OBJECT_ID_FIELDS = [
+    "tags",
+    "tagIds",
+    "userId",
+    "ingredientGroups.ingredients.ingredientId",
+    "ingredientGroups.ingredients.unitId",
+]
+
+
+def prepare_recipe_document(recipe: Recipe) -> Dict[str, Any]:
+    """
+    Turn an incoming recipe into the document shape used by the collection.
+
+    ObjectId references are converted from their string form and the flat rating of the
+    API contract is stored as the embedded document the collection is indexed on.
+
+    :param recipe: Recipe model received from the client
+    :returns: Document ready to be written to MongoDB
+    """
+    recipe_dict = convert_object_ids(recipe.model_dump(), OBJECT_ID_FIELDS)
+    recipe_dict["rating"] = deserialize_rating(
+        recipe_dict.get("rating"), recipe_dict.get("sourceRatingVotes")
+    )
+    return recipe_dict
 
 
 @router.get("/recommendations", status_code=status.HTTP_200_OK)
@@ -80,7 +113,7 @@ async def get_recipe_recommendations(
             if min_rating is not None and min_rating > 0:
                 # Only apply rating filter if min_rating is above 0
                 # This allows null ratings to pass through when min_rating is 0
-                filter_query["rating"] = {"$gte": min_rating}
+                filter_query[RATING_FIELD] = {"$gte": min_rating}
             
             # Votes filter (using sourceRatingVotes, handle null values)
             if min_votes is not None and min_votes > 0:
@@ -101,7 +134,7 @@ async def get_recipe_recommendations(
                 tag_id_list = [id.strip() for id in tag_ids.split(",") if id.strip()]
                 valid_tag_ids = [ObjectId(id) for id in tag_id_list if ObjectId.is_valid(id)]
                 if valid_tag_ids:
-                    filter_query["tags"] = {"$in": valid_tag_ids}
+                    filter_query["$or"] = [{field: {"$in": valid_tag_ids}} for field in TAG_FIELDS]
             
             # Difficulty filter
             if difficulty:
@@ -153,7 +186,7 @@ async def get_recipe_recommendations(
         # Fallback - get first 8 recipes with images
         try:
             recommendations = await db[collection].find({
-                "previewImageUrlTemplate": {"$exists": True, "$ne": "", "$ne": None}
+                "previewImageUrlTemplate": {"$exists": True, "$nin": ["", None]}
             }).limit(8).to_list(8)
             
             # Store images for fallback recipes that have image URLs but no stored images
@@ -217,7 +250,7 @@ async def get_recipes(
     if tags:
         try:
             tag_ids = [ObjectId(tag.strip()) for tag in tags if tag.strip()]
-            query["tagIds"] = {"$in": tag_ids}
+            query["$or"] = [{field: {"$in": tag_ids}} for field in TAG_FIELDS]
         except bson_errors.InvalidId as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -227,8 +260,7 @@ async def get_recipes(
     if search:
         query["title"] = {"$regex": search, "$options": "i"}
 
-    recipes = await db[collection].find(query).skip(skip).limit(page_size).sort("rating", -1).to_list(page_size)
-    print(f"db[${collection}].find({query}).skip({skip}).limit({page_size}).sort('rating', -1)")
+    recipes = await db[collection].find(query).skip(skip).limit(page_size).sort(RATING_FIELD, -1).to_list(page_size)
     total = await db[collection].count_documents(query)
 
     # Store images for recipes that have image URLs but no stored images
@@ -277,15 +309,7 @@ async def create_recipe(
     @raise HTTPException: If recipe creation fails
     """
     try:
-        recipe_dict = recipe.model_dump()
-        fields_to_convert = [
-            "tagIds",
-            "userId",
-            "ingredientGroups.ingredients.ingredientId",
-            "ingredientGroups.ingredients.unitId"
-        ]
-
-        converted_dict = convert_object_ids(recipe_dict, fields_to_convert)
+        converted_dict = prepare_recipe_document(recipe)
         result = await db[collection].insert_one(converted_dict)
 
         if result.inserted_id:
@@ -360,7 +384,10 @@ async def get_recipe(recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
 
 @router.put("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def update_recipe(recipe: Recipe, recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
-    result = await db[collection].find_one_and_update({"_id": ObjectId(recipe_id)}, {"$set": recipe.model_dump()})
+    result = await db[collection].find_one_and_update(
+        {"_id": ObjectId(recipe_id)},
+        {"$set": prepare_recipe_document(recipe)}
+    )
     if not result:
         raise HTTPException(status_code=404, detail="Rezept nicht gefunden")
     return recipe
