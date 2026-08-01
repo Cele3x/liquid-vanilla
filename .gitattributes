@@ -1,0 +1,22 @@
+# Normalize all text files to LF in the repository.
+#
+# The tree had grown a mix of CRLF and LF files, so running Prettier rewrote
+# whole files and buried real changes in line-ending noise. Git now detects text
+# files automatically and stores them with LF regardless of the platform they
+# were written on; working copies on Windows still check out as the editor
+# prefers.
+* text=auto eol=lf
+
+# Binaries Git should never touch, listed explicitly rather than relying on
+# content detection.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
