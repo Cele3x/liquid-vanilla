@@ -18,11 +18,11 @@ export const useCategoryStore = defineStore('category', {
 
   getters: {
     getCategoryById: (state) => (id: string) => {
-      return state.categories.find(category => category.id === id)
+      return state.categories.find((category) => category.id === id)
     },
 
     getCategoryByName: (state) => (name: string) => {
-      return state.categories.find(category => category.name === name)
+      return state.categories.find((category) => category.name === name)
     }
   },
 
@@ -32,7 +32,7 @@ export const useCategoryStore = defineStore('category', {
 
       this.loading = true
       this.error = null
-      
+
       try {
         const data = await categoryService.getCategories()
         this.categories = data

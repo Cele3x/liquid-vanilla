@@ -84,7 +84,9 @@ const toggleSearch = () => {
             class="p-1 text-accent-light dark:text-accent hover:text-dark dark:hover:text-light focus:outline-none h-9 w-9 flex items-center justify-center cursor-pointer"
             :title="isDarkMode ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln'"
           >
-            <span class="sr-only">{{ isDarkMode ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln' }}</span>
+            <span class="sr-only">{{
+              isDarkMode ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln'
+            }}</span>
             <!-- Sun icon for light mode -->
             <svg
               v-if="isDarkMode"

@@ -19,21 +19,23 @@ const groupedTags = computed(() => {
   if (!tags.value || !categories.value) return []
 
   // Create category groups with their tags
-  const categoryGroups = categories.value.map(category => {
-    const categoryTags = tags.value.filter(tag => tag.categoryId === category.id)
-    return {
-      category,
-      tags: categoryTags
-    }
-  }).filter(group => group.tags.length > 0) // Only show categories that have tags
+  const categoryGroups = categories.value
+    .map((category) => {
+      const categoryTags = tags.value.filter((tag) => tag.categoryId === category.id)
+      return {
+        category,
+        tags: categoryTags
+      }
+    })
+    .filter((group) => group.tags.length > 0) // Only show categories that have tags
 
   // Add uncategorized tags group
-  const uncategorizedTags = tags.value.filter(tag => !tag.categoryId || tag.categoryId === null)
+  const uncategorizedTags = tags.value.filter((tag) => !tag.categoryId || tag.categoryId === null)
   if (uncategorizedTags.length > 0) {
     categoryGroups.push({
-      category: { 
-        id: 'uncategorized', 
-        name: 'Weitere Tags', 
+      category: {
+        id: 'uncategorized',
+        name: 'Weitere Tags',
         description: 'Tags ohne Kategorie',
         createdAt: '',
         updatedAt: ''
@@ -48,10 +50,7 @@ const groupedTags = computed(() => {
 const loading = computed(() => tagsLoading.value || categoriesLoading.value)
 
 onMounted(async () => {
-  await Promise.all([
-    tagStore.fetchTags(),
-    categoryStore.fetchCategories()
-  ])
+  await Promise.all([tagStore.fetchTags(), categoryStore.fetchCategories()])
 })
 
 const handleTagClick = (tagId: string) => {
@@ -66,13 +65,9 @@ const handleTagClick = (tagId: string) => {
       <div v-if="loading" class="text-center mt-4">
         <p class="text-dark dark:text-light">Lade Kategorien...</p>
       </div>
-      
+
       <div v-else>
-        <div 
-          v-for="group in groupedTags" 
-          :key="group.category.id" 
-          class="category-group mb-8"
-        >
+        <div v-for="group in groupedTags" :key="group.category.id" class="category-group mb-8">
           <div class="category-header mb-4">
             <h2 class="text-2xl font-bold text-dark dark:text-light mb-2">
               {{ group.category.name }}
@@ -81,7 +76,7 @@ const handleTagClick = (tagId: string) => {
               {{ group.category.description }}
             </p>
           </div>
-          
+
           <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             <div
               v-for="tag in group.tags"

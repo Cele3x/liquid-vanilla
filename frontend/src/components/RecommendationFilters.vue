@@ -8,17 +8,27 @@
     >
       <div class="flex items-center gap-2">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v4.586l-4-2V12a1 1 0 00-.293-.707L3.293 4.707A1 1 0 013 4z" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v4.586l-4-2V12a1 1 0 00-.293-.707L3.293 4.707A1 1 0 013 4z"
+          />
         </svg>
         <span class="font-medium">Rezept-Filter</span>
-        <span v-if="activeFiltersCount > 0" class="bg-gold-light dark:bg-gold text-white text-sm px-2 py-1 ">
+        <span
+          v-if="activeFiltersCount > 0"
+          class="bg-gold-light dark:bg-gold text-white text-sm px-2 py-1"
+        >
           {{ activeFiltersCount }}
         </span>
       </div>
-      <svg 
-        class="w-5 h-5 transition-transform duration-200" 
+      <svg
+        class="w-5 h-5 transition-transform duration-200"
         :class="{ 'rotate-180': showFilters }"
-        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
       >
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
       </svg>
@@ -36,8 +46,12 @@
             v-for="rating in [0, 3.0, 3.5, 4.0, 4.5]"
             :key="rating"
             @click="filters.minRating = rating"
-            class="px-3 py-1 text-sm  border transition-colors cursor-pointer"
-            :class="filters.minRating === rating ? 'bg-gold-light dark:bg-gold text-white border' : 'bg-white dark:bg-primary hover:bg-secondary-light dark:hover:bg-secondary border text-dark dark:text-light'"
+            class="px-3 py-1 text-sm border transition-colors cursor-pointer"
+            :class="
+              filters.minRating === rating
+                ? 'bg-gold-light dark:bg-gold text-white border'
+                : 'bg-white dark:bg-primary hover:bg-secondary-light dark:hover:bg-secondary border text-dark dark:text-light'
+            "
           >
             {{ rating === 0 ? 'Beliebig' : rating + '★' }}
           </button>
@@ -48,7 +62,7 @@
           min="0"
           max="5"
           step="0.1"
-          class="w-full h-2 bg-gold-light dark:bg-gold  appearance-none cursor-pointer slider"
+          class="w-full h-2 bg-gold-light dark:bg-gold appearance-none cursor-pointer slider"
         />
       </div>
 
@@ -62,8 +76,12 @@
             v-for="preset in votePresets"
             :key="preset"
             @click="filters.minVotes = preset"
-            class="px-3 py-1 text-sm  border transition-colors cursor-pointer"
-            :class="filters.minVotes === preset ? 'bg-gold-light dark:bg-gold text-white border' : 'bg-white dark:bg-primary hover:bg-secondary-light dark:hover:bg-secondary border text-dark dark:text-light'"
+            class="px-3 py-1 text-sm border transition-colors cursor-pointer"
+            :class="
+              filters.minVotes === preset
+                ? 'bg-gold-light dark:bg-gold text-white border'
+                : 'bg-white dark:bg-primary hover:bg-secondary-light dark:hover:bg-secondary border text-dark dark:text-light'
+            "
           >
             {{ preset }}+
           </button>
@@ -74,21 +92,23 @@
           min="0"
           max="5000"
           step="50"
-          class="w-full h-2 bg-gold-light dark:bg-gold  appearance-none cursor-pointer slider"
+          class="w-full h-2 bg-gold-light dark:bg-gold appearance-none cursor-pointer slider"
         />
       </div>
 
       <!-- Has Image Toggle -->
       <div class="filter-section">
         <label class="flex items-center justify-between">
-          <span class="text-base font-medium text-dark dark:text-light">Nur Rezepte mit Bildern</span>
-          <div 
+          <span class="text-base font-medium text-dark dark:text-light"
+            >Nur Rezepte mit Bildern</span
+          >
+          <div
             @click="filters.hasImage = !filters.hasImage"
-            class="relative inline-flex items-center h-6 w-11  cursor-pointer transition-colors"
+            class="relative inline-flex items-center h-6 w-11 cursor-pointer transition-colors"
             :class="filters.hasImage ? 'bg-gold-light dark:bg-gold' : 'bg-accent'"
           >
-            <span 
-              class="inline-block w-4 h-4 transform bg-white  transition-transform"
+            <span
+              class="inline-block w-4 h-4 transform bg-white transition-transform"
               :class="filters.hasImage ? 'translate-x-6' : 'translate-x-1'"
             ></span>
           </div>
@@ -98,7 +118,7 @@
       <!-- Tags Filter -->
       <div class="filter-section">
         <label class="block text-base font-medium text-dark dark:text-light mb-3">Tags</label>
-        
+
         <!-- Selected Tags (always visible) -->
         <div v-if="selectedTags.length > 0" class="mb-3">
           <div class="flex flex-wrap gap-1">
@@ -110,7 +130,12 @@
             >
               {{ tag.name }}
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -137,7 +162,11 @@
             :disabled="filters.tagIds.includes(tag.id)"
           >
             <span class="text-sm text-dark dark:text-light">{{ tag.name }}</span>
-            <span v-if="filters.tagIds.includes(tag.id)" class="text-sm text-gold-light dark:text-gold">(selected)</span>
+            <span
+              v-if="filters.tagIds.includes(tag.id)"
+              class="text-sm text-gold-light dark:text-gold"
+              >(selected)</span
+            >
           </button>
           <div v-if="searchResults.length === 0" class="p-2 text-sm text-gold-light dark:text-gold">
             Keine Tags gefunden für "{{ searchTags }}"
@@ -147,22 +176,25 @@
 
       <!-- Difficulty Filter -->
       <div class="filter-section">
-        <label class="block text-base font-medium text-dark dark:text-light mb-3">Schwierigkeit</label>
+        <label class="block text-base font-medium text-dark dark:text-light mb-3"
+          >Schwierigkeit</label
+        >
         <div class="flex gap-2">
           <button
             v-for="level in [1, 2, 3]"
             :key="level"
             @click="toggleDifficulty(level)"
-            class="flex-1 py-2 px-3 text-base font-medium  border-2 transition-colors cursor-pointer"
-            :class="filters.difficulty.includes(level) 
-              ? 'bg-gold-light dark:bg-gold text-white border' 
-              : 'bg-white dark:bg-primary text-dark dark:text-light border hover:bg-secondary-light dark:hover:bg-secondary'"
+            class="flex-1 py-2 px-3 text-base font-medium border-2 transition-colors cursor-pointer"
+            :class="
+              filters.difficulty.includes(level)
+                ? 'bg-gold-light dark:bg-gold text-white border'
+                : 'bg-white dark:bg-primary text-dark dark:text-light border hover:bg-secondary-light dark:hover:bg-secondary'
+            "
           >
             {{ level === 1 ? 'Einfach' : level === 2 ? 'Mittel' : 'Schwer' }}
           </button>
         </div>
       </div>
-
 
       <!-- Action Buttons -->
       <div class="flex gap-2 pt-4">
@@ -206,12 +238,12 @@ const searchTags = ref('')
 
 // Default filters - more permissive for demo purposes, user can tighten them
 const defaultFilters: RecommendationFilters = {
-  minRating: 0.0,  // Start permissive, user can increase
-  minVotes: 0,     // Start permissive, user can increase  
+  minRating: 0.0, // Start permissive, user can increase
+  minVotes: 0, // Start permissive, user can increase
   maxVotes: null,
-  hasImage: true,  // Only recipes with images by default
+  hasImage: true, // Only recipes with images by default
   tagIds: [],
-  difficulty: [1, 2, 3], // All difficulties allowed by default
+  difficulty: [1, 2, 3] // All difficulties allowed by default
 }
 
 // Load filters from localStorage or use defaults
@@ -237,47 +269,46 @@ const votePresets = [0, 100, 500, 1000, 2000]
 // Computed properties
 const selectedTags = computed(() => {
   if (!availableTags.value || !filters.value.tagIds) return []
-  return availableTags.value.filter(tag => filters.value.tagIds.includes(tag.id))
+  return availableTags.value.filter((tag) => filters.value.tagIds.includes(tag.id))
 })
 
 const searchResults = computed(() => {
   if (!searchTags.value || !availableTags.value) {
     return []
   }
-  return availableTags.value.filter(tag => 
-    tag.name.toLowerCase().includes(searchTags.value.toLowerCase())
-  ).slice(0, 20) // Limit to 20 results
+  return availableTags.value
+    .filter((tag) => tag.name.toLowerCase().includes(searchTags.value.toLowerCase()))
+    .slice(0, 20) // Limit to 20 results
 })
 
 const activeFiltersCount = computed(() => {
   let count = 0
-  
+
   // Check if rating is different from default
   if (filters.value.minRating !== defaultFilters.minRating) {
     count++
   }
-  
+
   // Check if votes is different from default
   if (filters.value.minVotes !== defaultFilters.minVotes) {
     count++
   }
-  
+
   // Check if has image is different from default
   if (filters.value.hasImage !== defaultFilters.hasImage) {
     count++
   }
-  
+
   // Check if difficulty is different from default
   if (filters.value.difficulty.length !== 3) {
     count++
   }
-  
+
   // Check if tags are selected
   if (filters.value.tagIds.length > 0) {
     count++
   }
-  
-  
+
   return count
 })
 
@@ -323,10 +354,10 @@ const applyFilters = () => {
   } catch (error) {
     console.warn('Failed to save filters to localStorage:', error)
   }
-  
+
   // Collapse the filter panel after applying
   showFilters.value = false
-  
+
   emit('filters-changed', { ...filters.value })
 }
 
@@ -338,7 +369,7 @@ onMounted(async () => {
   } catch (error) {
     console.warn('Failed to fetch tags:', error)
   }
-  
+
   // Emit the initial filters after component is mounted and tags are loaded
   // This ensures the parent gets the persisted filters for the initial load
   emit('filters-changed', { ...filters.value })
