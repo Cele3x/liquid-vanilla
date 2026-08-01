@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-08-01
+
+### Security
+- Resolved all 21 npm advisories in the frontend dependency tree, including critical
+  issues in `vitest`, `tar`, and `shell-quote`, and high-severity path traversal and
+  arbitrary file read issues in `vite`
+- Updated vulnerable backend dependencies: `aiohttp`, `starlette`, `python-dotenv`,
+  `setuptools`, and `pytest` now floor at versions with no known advisories
+
+### Changed
+- **Backend dependency floors raised across major versions**: `starlette` (0.41 → 1.3),
+  `fastapi` (0.115 → 0.141), and `pytest` (8.3 → 9.0). FastAPI now requires Python 3.10+;
+  CI and deployment already run Python 3.12
+
 ## [1.2.0] - 2025-07-22
 
 ### Added
