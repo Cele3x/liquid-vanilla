@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tag filtering and tag display** - recipes are filtered and shown with their tags again instead of returning no matches and empty tag lists
 - Recipes without a rating are now displayed instead of breaking the list
 - API errors such as an invalid tag ID now return their intended status code instead of a generic server error
+- **Recipe cards showed raw tag ids** instead of tag names, because neither the recipe list nor the recommendations view resolved ids against the tag list
+- **Filtering by several tags** only applied the last one selected; every selected tag is now sent to the API
 
 ### Security
 - Resolved all 21 npm advisories in the frontend dependency tree, including critical
