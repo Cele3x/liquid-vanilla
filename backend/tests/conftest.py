@@ -49,10 +49,10 @@ class AsyncMongoCollection:
     async def count_documents(self, query):
         return self.collection.count_documents(query)
     
-    def find(self, query=None):
+    def find(self, query=None, projection=None):
         if query is None:
             query = {}
-        return AsyncMongoCursor(self.collection.find(query))
+        return AsyncMongoCursor(self.collection.find(query, projection))
     
     async def aggregate(self, pipeline):
         return list(self.collection.aggregate(pipeline))
@@ -108,14 +108,14 @@ def mock_image_storage_service():
 
 
 @pytest.fixture
-def client(mock_image_cache_service):
+def client(mock_image_storage_service):
     """Test client with mocked database and image service."""
     global _test_db
     _test_db = None  # Reset database for each test
-    
+
     app.dependency_overrides[get_db] = get_test_db
-    
-    with patch('src.recipes.routers.image_cache_service', mock_image_cache_service):
+
+    with patch('src.recipes.routers.image_storage_service', mock_image_storage_service):
         with TestClient(app) as test_client:
             yield test_client
     
