@@ -3,6 +3,7 @@ import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { recipeService } from '@/services/recipeService'
 import placeholderImageDark from '@/assets/recipe-dark.png'
 import RecommendationFilters from '@/components/RecommendationFilters.vue'
+import { normalizeRating } from '@/utils/rating'
 
 interface Recipe {
   id: string
@@ -40,7 +41,10 @@ const fetchRecommendations = async () => {
   try {
     const lockedIds = Array.from(lockedRecipeIds.value)
     const response = await recipeService.getRecommendations(lockedIds, currentFilters.value)
-    recommendations.value = response.recommendations
+    recommendations.value = response.recommendations.map((recipe: Recipe) => ({
+      ...recipe,
+      rating: normalizeRating(recipe.rating)
+    }))
   } catch (error) {
     console.error('Error fetching recommendations:', error)
     // On error, restore locked recipes at least
@@ -83,10 +87,10 @@ const handleTouchStart = (event: TouchEvent) => {
 
 const handleTouchMove = (event: TouchEvent) => {
   if (!isPulling.value || loading.value) return
-  
+
   currentY.value = event.touches[0].clientY
   pullDistance.value = Math.max(0, currentY.value - startY.value)
-  
+
   if (pullDistance.value > 0) {
     pullToRefresh.value = true
     // Prevent default scrolling when pulling down from top
@@ -98,14 +102,14 @@ const handleTouchMove = (event: TouchEvent) => {
 
 const handleTouchEnd = () => {
   if (!isPulling.value) return
-  
+
   isPulling.value = false
-  
+
   if (pullDistance.value >= refreshThreshold) {
     // Trigger refresh
     fetchRecommendations()
   }
-  
+
   // Reset pull state
   pullToRefresh.value = false
   pullDistance.value = 0
@@ -136,23 +140,34 @@ onUnmounted(() => {
 <template>
   <div class="container mx-auto px-4 py-8">
     <!-- Pull-to-refresh indicator (mobile only) -->
-    <div 
+    <div
       v-if="pullToRefresh && isPulling"
       class="fixed top-0 left-0 right-0 z-50 flex justify-center pt-4 md:hidden transition-opacity duration-200"
       :style="{ transform: `translateY(${Math.min(pullDistance * 0.5, 40)}px)` }"
     >
-      <div class="bg-gold-light dark:bg-gold text-white px-4 py-2 flex items-center gap-2 shadow-lg">
-        <svg 
-          class="w-4 h-4 animate-spin" 
+      <div
+        class="bg-gold-light dark:bg-gold text-white px-4 py-2 flex items-center gap-2 shadow-lg"
+      >
+        <svg
+          class="w-4 h-4 animate-spin"
           :class="{ 'text-white': pullDistance >= refreshThreshold }"
-          fill="none" 
-          stroke="currentColor" 
+          fill="none"
+          stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          />
         </svg>
         <span class="text-sm font-medium">
-          {{ pullDistance >= refreshThreshold ? 'Loslassen zum Aktualisieren' : 'Herunterziehen zum Aktualisieren' }}
+          {{
+            pullDistance >= refreshThreshold
+              ? 'Loslassen zum Aktualisieren'
+              : 'Herunterziehen zum Aktualisieren'
+          }}
         </span>
       </div>
     </div>
@@ -330,7 +345,9 @@ onUnmounted(() => {
       v-if="!loading && !recommendations.length && loadingPlaceholders === 0"
       class="text-center mt-8"
     >
-      <p class="text-dark dark:text-light text-lg">Keine Empfehlungen gefunden. Versuche es später noch einmal!</p>
+      <p class="text-dark dark:text-light text-lg">
+        Keine Empfehlungen gefunden. Versuche es später noch einmal!
+      </p>
     </div>
   </div>
 </template>

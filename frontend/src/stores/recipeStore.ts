@@ -1,11 +1,12 @@
 // stores/recipeStore.ts
 import { defineStore } from 'pinia'
 import { recipeService } from '@/services/recipeService'
+import { normalizeRating } from '@/utils/rating'
 
 interface Recipe {
   id: string
   title: string
-  rating: number
+  rating: number | null
   sourceRatingVotes: number
   previewImageUrlTemplate: string
   cachedImageUrl?: string
@@ -39,6 +40,7 @@ export const useRecipeStore = defineStore('recipe', {
         )
         const newRecipes = data.recipes.map((recipe: Recipe) => ({
           ...recipe,
+          rating: normalizeRating(recipe.rating),
           defaultImageUrl:
             recipe.cachedImageUrl ||
             (recipe.previewImageUrlTemplate

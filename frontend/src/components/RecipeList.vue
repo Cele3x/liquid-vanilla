@@ -86,7 +86,10 @@ onUnmounted(() => {
             <div
               class="recipe-rating flex items-center justify-center gap-3 text-gold-light dark:text-gold"
             >
-              <div class="tracking-wider text-sm flex items-center gap-2">
+              <div
+                v-if="recipe.rating !== null"
+                class="tracking-wider text-sm flex items-center gap-2"
+              >
                 <div class="flex">
                   <span v-for="n in Math.floor(recipe.rating)" :key="n">★</span>
                   <span v-if="recipe.rating % 1 >= 0.5" class="opacity-40">★</span>

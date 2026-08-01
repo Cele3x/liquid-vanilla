@@ -1,7 +1,65 @@
+from typing import Any, Optional
+
+
 def serialize_tags(tag_ids: list) -> list:
     if not tag_ids:
         return []
     return [str(tag_id) for tag_id in tag_ids if tag_ids]
+
+
+def serialize_rating(rating: Any) -> Optional[float]:
+    """
+    Normalize a stored rating to a plain float.
+
+    Recipes store the rating as an embedded document ``{"rating": float, "numVotes": int}``,
+    while the API contract exposes a plain float. Documents without a rating yield ``None``.
+
+    :param rating: Raw rating value as stored in the database
+    :returns: The rating as a float, or None if the recipe has no rating
+    """
+    if isinstance(rating, dict):
+        rating = rating.get("rating")
+    if isinstance(rating, bool) or not isinstance(rating, (int, float)):
+        return None
+    return float(rating)
+
+
+def deserialize_rating(rating: Any, votes: Any = None) -> Optional[dict]:
+    """
+    Build the stored rating document from a flat rating value.
+
+    The recipes collection stores and indexes the rating as ``{"rating": float, "numVotes": int}``,
+    while the API accepts and returns a plain float.
+
+    :param rating: Rating value supplied by the client
+    :param votes: Number of votes backing the rating
+    :returns: Embedded rating document, or None when no rating was supplied
+    """
+    if isinstance(rating, dict):
+        return rating
+    if isinstance(rating, bool) or not isinstance(rating, (int, float)):
+        return None
+    return {"rating": float(rating), "numVotes": int(votes) if isinstance(votes, int) else 0}
+
+
+def serialize_rating_votes(recipe: dict) -> Optional[int]:
+    """
+    Resolve the number of votes backing a recipe rating.
+
+    Prefers the flat ``sourceRatingVotes`` field and falls back to the ``numVotes``
+    entry of the embedded rating document.
+
+    :param recipe: Raw recipe document from the database
+    :returns: Vote count as an int, or None if unavailable
+    """
+    votes = recipe.get("sourceRatingVotes")
+    if votes is None:
+        rating = recipe.get("rating")
+        if isinstance(rating, dict):
+            votes = rating.get("numVotes")
+    if isinstance(votes, bool) or not isinstance(votes, (int, float)):
+        return None
+    return int(votes)
 
 
 def serialize_ingredient(ingredient: dict) -> dict:
@@ -35,7 +93,7 @@ def serialize_recipe(recipe: dict) -> dict:
     return {
         "id": str(recipe.get("_id")),
         "title": recipe.get("title"),
-        "rating": recipe.get("rating"),
+        "rating": serialize_rating(recipe.get("rating")),
         "previewImageUrlTemplate": recipe.get("previewImageUrlTemplate"),
         "cachedImagePath": recipe.get("cachedImagePath"),
         "cachedImageUrl": recipe.get("cachedImageUrl"),
@@ -52,8 +110,8 @@ def serialize_recipe(recipe: dict) -> dict:
         "sourceRating": recipe.get("sourceRating"),
         "subtitle": recipe.get("subtitle"),
         "createdAt": recipe.get("createdAt"),
-        "sourceRatingVotes": recipe.get("sourceRatingVotes"),
-        "tagIds": serialize_tags(recipe.get("tagIds")),
+        "sourceRatingVotes": serialize_rating_votes(recipe),
+        "tagIds": serialize_tags(recipe.get("tagIds") or recipe.get("tags")),
         "ingredientGroups": serialize_ingredient_groups(recipe.get("ingredientGroups")),
         "difficulty": recipe.get("difficulty"),
         "sourceViewCount": recipe.get("sourceViewCount"),
