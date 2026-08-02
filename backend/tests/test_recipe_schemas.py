@@ -136,7 +136,7 @@ class TestRecipeSchemas:
         
         # Verify all fields are preserved
         expected_fields = {
-            "id", "title", "rating", "sourceUrl", "previewImageUrlTemplate",
+            "id", "title", "rating", "score", "sourceUrl", "previewImageUrlTemplate",
             "cachedImagePath", "cachedImageUrl", "imageCachedAt",
             "additionalDescription", "preparationTime", "restingTime", "source",
             "sourceId", "status", "cookingTime", "servings", "sourceRating",

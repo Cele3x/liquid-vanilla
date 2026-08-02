@@ -53,9 +53,16 @@ class AsyncMongoCollection:
         if query is None:
             query = {}
         return AsyncMongoCursor(self.collection.find(query, projection))
-    
-    async def aggregate(self, pipeline):
-        return list(self.collection.aggregate(pipeline))
+
+    async def distinct(self, key, query=None):
+        return self.collection.distinct(key, query)
+
+    def aggregate(self, pipeline):
+        # Motor returns a cursor here rather than a coroutine, and callers await the
+        # to_list() that follows. Returning a plain list instead made every aggregation
+        # raise, which the recommendation endpoint swallowed into its fallback - so the
+        # pipeline it actually runs in production went untested.
+        return AsyncMongoCursor(iter(self.collection.aggregate(pipeline)))
 
 
 class AsyncMongoCursor:
@@ -93,6 +100,20 @@ async def get_test_db():
     if _test_db is None:
         _test_db = AsyncMongoDB()
     yield _test_db
+
+
+@pytest.fixture
+def raw_db(client):
+    """
+    Direct handle on the database behind the API.
+
+    Lets a test seed documents in their stored shape - an embedded rating document, for
+    instance - which the write endpoints deliberately refuse to create.
+    """
+    global _test_db
+    if _test_db is None:
+        _test_db = AsyncMongoDB()
+    return _test_db.db
 
 
 @pytest.fixture

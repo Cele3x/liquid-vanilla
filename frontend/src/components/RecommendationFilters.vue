@@ -36,28 +36,32 @@
 
     <!-- Filter Panel -->
     <div v-show="showFilters" class="bg-white dark:bg-secondary border border p-4 space-y-6">
-      <!-- Rating Filter -->
+      <!-- Quality Filter -->
       <div class="filter-section">
         <label class="block text-base font-medium text-dark dark:text-light mb-3">
-          Mindestbewertung: {{ filters.minRating }}★
+          Qualität: {{ scoreLabel(filters.minScore) }}
         </label>
+        <p class="text-sm text-secondary dark:text-accent mb-3">
+          Vergleicht jedes Rezept mit den anderen der gleichen Seite, damit Rezepte von streng und
+          großzügig bewertenden Seiten gemeinsam gefiltert werden können.
+        </p>
         <div class="flex items-center gap-2 mb-2">
           <button
-            v-for="rating in [0, 3.0, 3.5, 4.0, 4.5]"
-            :key="rating"
-            @click="filters.minRating = rating"
+            v-for="preset in scorePresets"
+            :key="preset"
+            @click="filters.minScore = preset"
             class="px-3 py-1 text-sm border transition-colors cursor-pointer"
             :class="
-              filters.minRating === rating
+              filters.minScore === preset
                 ? 'bg-gold-light dark:bg-gold text-white border'
                 : 'bg-white dark:bg-primary hover:bg-secondary-light dark:hover:bg-secondary border text-dark dark:text-light'
             "
           >
-            {{ rating === 0 ? 'Beliebig' : rating + '★' }}
+            {{ scoreLabel(preset) }}
           </button>
         </div>
         <input
-          v-model.number="filters.minRating"
+          v-model.number="filters.minScore"
           type="range"
           min="0"
           max="5"
@@ -90,10 +94,30 @@
           v-model.number="filters.minVotes"
           type="range"
           min="0"
-          max="5000"
-          step="50"
+          max="250"
+          step="5"
           class="w-full h-2 bg-gold-light dark:bg-gold appearance-none cursor-pointer slider"
         />
+      </div>
+
+      <!-- Sources Filter -->
+      <div v-if="availableSources.length > 1" class="filter-section">
+        <label class="block text-base font-medium text-dark dark:text-light mb-3">Quellen</label>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="source in availableSources"
+            :key="source"
+            @click="toggleSource(source)"
+            class="px-3 py-1 text-sm border transition-colors cursor-pointer"
+            :class="
+              isSourceSelected(source)
+                ? 'bg-gold-light dark:bg-gold text-white border'
+                : 'bg-white dark:bg-primary hover:bg-secondary-light dark:hover:bg-secondary border text-dark dark:text-light'
+            "
+          >
+            {{ source }}
+          </button>
+        </div>
       </div>
 
       <!-- Has Image Toggle -->
@@ -216,16 +240,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { tagService } from '@/services/tagService'
+import { recipeService } from '@/services/recipeService'
 
 interface RecommendationFilters {
-  minRating: number
+  minScore: number
   minVotes: number
   maxVotes: number | null
   hasImage: boolean
   tagIds: string[]
   difficulty: number[]
+  sources: string[]
 }
 
 const emit = defineEmits<{
@@ -234,22 +260,29 @@ const emit = defineEmits<{
 
 const showFilters = ref(false)
 const availableTags = ref<Array<{ id: string; name: string }>>([])
+const availableSources = ref<string[]>([])
 const searchTags = ref('')
 
-// Default filters - more permissive for demo purposes, user can tighten them
+// Default filters - the quality floor keeps recommendations worth showing, everything
+// else stays permissive so the user only ever narrows.
 const defaultFilters: RecommendationFilters = {
-  minRating: 0.0, // Start permissive, user can increase
+  minScore: 3.5, // Top 30% of every source
   minVotes: 0, // Start permissive, user can increase
   maxVotes: null,
   hasImage: true, // Only recipes with images by default
   tagIds: [],
-  difficulty: [1, 2, 3] // All difficulties allowed by default
+  difficulty: [1, 2, 3], // All difficulties allowed by default
+  sources: [] // Empty means every source
 }
+
+// Versioned because the stored rating filter used to mean stars and now means rank;
+// carrying the old value over would silently apply a filter the user never chose.
+const STORAGE_KEY = 'recommendationFilters.v2'
 
 // Load filters from localStorage or use defaults
 const loadFiltersFromStorage = (): RecommendationFilters => {
   try {
-    const stored = localStorage.getItem('recommendationFilters')
+    const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       const parsed = JSON.parse(stored)
       // Merge with defaults to handle any missing properties
@@ -263,8 +296,22 @@ const loadFiltersFromStorage = (): RecommendationFilters => {
 
 const filters = ref<RecommendationFilters>(loadFiltersFromStorage())
 
-// Preset values
-const votePresets = [0, 100, 500, 1000, 2000]
+// Preset values. The score is a rank inside its own source, so a threshold selects the
+// same share of every site; the vote presets stay inside the range the smaller source
+// actually reaches.
+const scorePresets = [0, 3.0, 3.5, 4.0, 4.5]
+const votePresets = [0, 5, 10, 25, 50]
+
+/**
+ * Describe a score threshold as the share of recipes it keeps.
+ *
+ * @param score - Minimum score between 0 and 5
+ * @returns Label for the button or heading
+ */
+const scoreLabel = (score: number): string => {
+  if (!score) return 'Beliebig'
+  return `Top ${Math.round((1 - score / 5) * 100)}%`
+}
 
 // Computed properties
 const selectedTags = computed(() => {
@@ -284,8 +331,8 @@ const searchResults = computed(() => {
 const activeFiltersCount = computed(() => {
   let count = 0
 
-  // Check if rating is different from default
-  if (filters.value.minRating !== defaultFilters.minRating) {
+  // Check if quality is different from default
+  if (filters.value.minScore !== defaultFilters.minScore) {
     count++
   }
 
@@ -309,10 +356,40 @@ const activeFiltersCount = computed(() => {
     count++
   }
 
+  // Check if the sources are restricted
+  if (filters.value.sources.length > 0) {
+    count++
+  }
+
   return count
 })
 
 // Methods
+const isSourceSelected = (source: string): boolean =>
+  filters.value.sources.length === 0 || filters.value.sources.includes(source)
+
+/**
+ * Add or remove a source from the selection.
+ *
+ * An empty selection means every source, so the first click has to start from the full
+ * list rather than from nothing - otherwise deselecting one site would select it.
+ *
+ * @param source - Source to toggle
+ */
+const toggleSource = (source: string) => {
+  const selected =
+    filters.value.sources.length === 0 ? [...availableSources.value] : [...filters.value.sources]
+  const index = selected.indexOf(source)
+  if (index > -1) {
+    selected.splice(index, 1)
+  } else {
+    selected.push(source)
+  }
+  // Selecting every source, or none at all, both mean "no restriction" - a selection
+  // that matches nothing would only ever return an empty page.
+  filters.value.sources = selected.length === availableSources.value.length ? [] : selected
+}
+
 const toggleDifficulty = (level: number) => {
   const index = filters.value.difficulty.indexOf(level)
   if (index > -1) {
@@ -342,7 +419,8 @@ const resetFilters = () => {
   filters.value = {
     ...defaultFilters,
     difficulty: [...defaultFilters.difficulty], // Create a new array copy
-    tagIds: [...defaultFilters.tagIds] // Also copy tagIds array
+    tagIds: [...defaultFilters.tagIds], // Also copy tagIds array
+    sources: [...defaultFilters.sources]
   }
   applyFilters()
 }
@@ -350,7 +428,7 @@ const resetFilters = () => {
 const applyFilters = () => {
   // Save filters to localStorage
   try {
-    localStorage.setItem('recommendationFilters', JSON.stringify(filters.value))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filters.value))
   } catch (error) {
     console.warn('Failed to save filters to localStorage:', error)
   }
@@ -361,13 +439,19 @@ const applyFilters = () => {
   emit('filters-changed', { ...filters.value })
 }
 
-// Fetch available tags on component mount
+// Fetch available tags and sources on component mount
 onMounted(async () => {
   try {
     const tagsResponse = await tagService.getTags()
     availableTags.value = tagsResponse || []
   } catch (error) {
     console.warn('Failed to fetch tags:', error)
+  }
+
+  try {
+    availableSources.value = await recipeService.getSources()
+  } catch (error) {
+    console.warn('Failed to fetch sources:', error)
   }
 
   // Emit the initial filters after component is mounted and tags are loaded

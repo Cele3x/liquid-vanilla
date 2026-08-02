@@ -33,12 +33,13 @@ export const recipeService = {
   async getRecommendations(
     lockedIds?: string[],
     filters?: {
-      minRating?: number
+      minScore?: number
       minVotes?: number
       maxVotes?: number
       hasImage?: boolean
       tagIds?: string[]
       difficulty?: number[]
+      sources?: string[]
     }
   ) {
     const params: any = {}
@@ -48,16 +49,22 @@ export const recipeService = {
     }
 
     if (filters) {
-      if (filters.minRating !== undefined) params.min_rating = filters.minRating
+      if (filters.minScore !== undefined) params.min_score = filters.minScore
       if (filters.minVotes !== undefined) params.min_votes = filters.minVotes
       if (filters.maxVotes !== undefined) params.max_votes = filters.maxVotes
       if (filters.hasImage !== undefined) params.has_image = filters.hasImage
       if (filters.tagIds && filters.tagIds.length > 0) params.tag_ids = filters.tagIds.join(',')
       if (filters.difficulty && filters.difficulty.length > 0)
         params.difficulty = filters.difficulty.join(',')
+      if (filters.sources && filters.sources.length > 0) params.sources = filters.sources.join(',')
     }
 
     const response = await api.get('/recipes/recommendations', { params })
     return response.data
+  },
+
+  async getSources(): Promise<string[]> {
+    const response = await api.get('/recipes/sources')
+    return response.data.sources ?? []
   }
 }

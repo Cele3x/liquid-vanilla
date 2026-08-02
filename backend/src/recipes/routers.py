@@ -1,3 +1,4 @@
+from itertools import zip_longest
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -6,7 +7,7 @@ from starlette import status
 from bson import ObjectId, errors as bson_errors
 
 from .models import Recipe
-from .schemas import deserialize_rating, serialize_recipe, serialize_recipes
+from .schemas import serialize_recipe, serialize_recipes
 from ..database import get_db
 from ..utils import convert_object_ids
 from ..images.service import image_storage_service
@@ -18,12 +19,17 @@ router = APIRouter(
 )
 collection = "recipes"
 
-# Recipes store their rating as an embedded document ({"rating": float, "numVotes": int}),
-# so queries and sorts have to address the nested field rather than "rating" itself.
-RATING_FIELD = "rating.rating"
+# The normalized 0-5 score written by the scraper's rating pipeline, stored inside the
+# embedded rating document. It expresses where a recipe ranks within its own source, so
+# ordering it against another source is meaningful; the star average users see lives in
+# "sourceRating" and is never sorted on.
+SCORE_FIELD = "rating.rating"
 
 # Tag references live under "tags"; a few legacy documents use "tagIds" instead.
 TAG_FIELDS = ("tags", "tagIds")
+
+# Recommendation slots to fill per request.
+RECOMMENDATION_SIZE = 8
 
 # Fields holding ObjectId references that arrive from clients as strings.
 OBJECT_ID_FIELDS = [
@@ -39,42 +45,171 @@ def prepare_recipe_document(recipe: Recipe) -> Dict[str, Any]:
     """
     Turn an incoming recipe into the document shape used by the collection.
 
-    ObjectId references are converted from their string form and the flat rating of the
-    API contract is stored as the embedded document the collection is indexed on.
+    ObjectId references are converted from their string form, and the rating the client
+    supplies is stored as ``sourceRating`` - both name the same thing, the raw star
+    average. An explicit ``sourceRating`` wins when a client sends both.
+
+    The embedded ``rating`` document is deliberately not written: it holds the
+    normalized score that only the scraper's rating pipeline can compute, and a client
+    value placed there would order the recipe against a scale it was never measured on.
 
     :param recipe: Recipe model received from the client
     :returns: Document ready to be written to MongoDB
     """
     recipe_dict = convert_object_ids(recipe.model_dump(), OBJECT_ID_FIELDS)
-    recipe_dict["rating"] = deserialize_rating(
-        recipe_dict.get("rating"), recipe_dict.get("sourceRatingVotes")
-    )
+    rating = recipe_dict.pop("rating", None)
+    if recipe_dict.get("sourceRating") is None and isinstance(rating, (int, float)) \
+            and not isinstance(rating, bool):
+        recipe_dict["sourceRating"] = float(rating)
     return recipe_dict
+
+
+def build_recommendation_filter(
+        exclude_ids: List[ObjectId],
+        min_score: Optional[float],
+        min_votes: Optional[int],
+        max_votes: Optional[int],
+        has_image: Optional[bool],
+        tag_ids: Optional[str],
+        difficulty: Optional[str],
+) -> Dict[str, Any]:
+    """
+    Build the MongoDB filter selecting the recipes a recommendation may be drawn from.
+
+    :param exclude_ids: Recipe ids already held by locked slots
+    :param min_score: Minimum normalized score, where 4.0 keeps the top 20% of a source
+    :param min_votes: Minimum number of votes backing the star average
+    :param max_votes: Maximum number of votes backing the star average
+    :param has_image: Only include recipes carrying a preview image
+    :param tag_ids: Comma-separated list of tag IDs to filter by
+    :param difficulty: Comma-separated difficulty levels (1,2,3)
+    :returns: Filter document, empty when nothing was restricted
+    """
+    filter_query: Dict[str, Any] = {}
+
+    if exclude_ids:
+        filter_query["_id"] = {"$nin": exclude_ids}
+
+    # Recipes that were never scored have no score field and drop out here, which is
+    # why the default is permissive rather than the top of the scale.
+    if min_score is not None and min_score > 0:
+        filter_query[SCORE_FIELD] = {"$gte": min_score}
+
+    # Votes back the star average, so they are counted on the raw source field. Vote
+    # weight is already folded into the score; this only exists to raise the floor.
+    votes_filter: Dict[str, Any] = {}
+    if min_votes is not None and min_votes > 0:
+        votes_filter["$gte"] = min_votes
+    if max_votes is not None:
+        votes_filter["$lte"] = max_votes
+    if votes_filter:
+        filter_query["sourceRatingVotes"] = votes_filter
+
+    if has_image:
+        filter_query["previewImageUrlTemplate"] = {"$exists": True, "$nin": ["", None]}
+
+    if tag_ids:
+        tag_id_list = [tag_id.strip() for tag_id in tag_ids.split(",") if tag_id.strip()]
+        valid_tag_ids = [ObjectId(tag_id) for tag_id in tag_id_list if ObjectId.is_valid(tag_id)]
+        if valid_tag_ids:
+            filter_query["$or"] = [{field: {"$in": valid_tag_ids}} for field in TAG_FIELDS]
+
+    if difficulty:
+        diff_levels = [
+            int(level.strip()) for level in difficulty.split(",")
+            if level.strip().isdigit() and 1 <= int(level.strip()) <= 3
+        ]
+        if diff_levels:
+            filter_query["difficulty"] = {"$in": diff_levels}
+
+    return filter_query
+
+
+async def sample_recipes(db: AsyncIOMotorClient, filter_query: Dict[str, Any],
+                         needed: int, sources: Optional[List[str]]) -> List[Dict[str, Any]]:
+    """
+    Draw random recipes, spread evenly over the sources that are in play.
+
+    A single ``$sample`` over the whole collection returns recipes in proportion to how
+    many each source contributes, so one site can take every slot of a page. Sampling
+    each source separately and interleaving the results keeps the page mixed, and still
+    fills every slot from the remaining sources when one of them runs short.
+
+    :param db: Database connection
+    :param filter_query: Filter selecting eligible recipes
+    :param needed: Number of recipes to return
+    :param sources: Sources to draw from, or None to use every source in the collection
+    :returns: Sampled recipe documents, at most ``needed`` of them
+    """
+    if needed <= 0:
+        return []
+
+    candidates = sources
+    if candidates is None:
+        candidates = [source for source in await db[collection].distinct("source") if source]
+
+    if len(candidates) <= 1:
+        query = dict(filter_query)
+        if candidates:
+            query["source"] = candidates[0]
+        pipeline = [{"$match": query}] if query else []
+        pipeline.append({"$sample": {"size": needed}})
+        return await db[collection].aggregate(pipeline).to_list(needed)
+
+    # One branch per source, each sampled to the full page size so that a source with
+    # too few matches can be covered by the others.
+    facets = {
+        f"source{index}": [
+            {"$match": {**filter_query, "source": source}},
+            {"$sample": {"size": needed}},
+        ]
+        for index, source in enumerate(candidates)
+    }
+    [grouped] = await db[collection].aggregate([{"$facet": facets}]).to_list(1)
+
+    selected: List[Dict[str, Any]] = []
+    for row in zip_longest(*(grouped.get(key, []) for key in facets)):
+        for recipe in row:
+            if recipe is None:
+                continue
+            selected.append(recipe)
+            if len(selected) == needed:
+                return selected
+    return selected
 
 
 @router.get("/recommendations", status_code=status.HTTP_200_OK)
 async def get_recipe_recommendations(
         db: AsyncIOMotorClient = Depends(get_db),
         locked_ids: Optional[str] = Query(None, description="Comma-separated list of locked recipe IDs"),
-        min_rating: Optional[float] = Query(4.0, description="Minimum recipe rating", ge=0.0, le=5.0),
-        min_votes: Optional[int] = Query(100, description="Minimum number of votes", ge=0),
+        min_score: Optional[float] = Query(
+            0.0,
+            description="Minimum normalized score (0-5). 4.0 keeps the top 20% of every source",
+            ge=0.0, le=5.0
+        ),
+        min_votes: Optional[int] = Query(0, description="Minimum number of votes", ge=0),
         max_votes: Optional[int] = Query(None, description="Maximum number of votes", ge=0),
         has_image: Optional[bool] = Query(True, description="Only recipes with images"),
         tag_ids: Optional[str] = Query(None, description="Comma-separated list of tag IDs"),
         difficulty: Optional[str] = Query(None, description="Comma-separated difficulty levels (1,2,3)"),
+        sources: Optional[str] = Query(None, description="Comma-separated list of sources"),
 ) -> Dict[str, Any]:
     """
     Get 8 random recipe recommendations with customizable filters.
     Locked recipes will be kept in their positions and new random recipes will fill remaining slots.
-    
+
+    Recipes are drawn evenly from the sources in play rather than in proportion to how
+    many recipes each source contributes.
+
     :param db: Database connection
     :param locked_ids: Comma-separated string of recipe IDs to keep locked in place
-    :param min_rating: Minimum recipe rating (default: 4.0)
-    :param min_votes: Minimum number of votes (default: 100)
+    :param min_score: Minimum normalized score, 0-5 (default: 0.0, no restriction)
+    :param min_votes: Minimum number of votes (default: 0, no restriction)
     :param max_votes: Maximum number of votes
     :param has_image: Only include recipes with images (default: True)
     :param tag_ids: Comma-separated list of tag IDs to filter by
     :param difficulty: Comma-separated difficulty levels (1,2,3)
+    :param sources: Comma-separated list of sources to draw from (default: all sources)
     :returns: Dictionary containing filtered recommended recipes
     """
     try:
@@ -97,60 +232,21 @@ async def get_recipe_recommendations(
                 locked_recipes = []
         
         # Calculate how many new recipes we need
-        needed_count = max(0, 8 - len(locked_recipes))
-        
+        needed_count = max(0, RECOMMENDATION_SIZE - len(locked_recipes))
+
         new_recipes = []
         if needed_count > 0:
-            # Build filter query based on parameters
-            filter_query = {}
-            
-            # Exclude already locked recipes
             exclude_ids = [ObjectId(id) for id in locked_recipe_ids if ObjectId.is_valid(id)]
-            if exclude_ids:
-                filter_query["_id"] = {"$nin": exclude_ids}
-            
-            # Rating filter (handle null ratings)
-            if min_rating is not None and min_rating > 0:
-                # Only apply rating filter if min_rating is above 0
-                # This allows null ratings to pass through when min_rating is 0
-                filter_query[RATING_FIELD] = {"$gte": min_rating}
-            
-            # Votes filter (using sourceRatingVotes, handle null values)
-            if min_votes is not None and min_votes > 0:
-                # Only apply votes filter if min_votes is above 0
-                filter_query["sourceRatingVotes"] = {"$gte": min_votes}
-            if max_votes is not None:
-                if "sourceRatingVotes" in filter_query:
-                    filter_query["sourceRatingVotes"]["$lte"] = max_votes
-                else:
-                    filter_query["sourceRatingVotes"] = {"$lte": max_votes}
-            
-            # Image filter
-            if has_image:
-                filter_query["previewImageUrlTemplate"] = {"$exists": True, "$ne": "", "$ne": None}
-            
-            # Tags filter
-            if tag_ids:
-                tag_id_list = [id.strip() for id in tag_ids.split(",") if id.strip()]
-                valid_tag_ids = [ObjectId(id) for id in tag_id_list if ObjectId.is_valid(id)]
-                if valid_tag_ids:
-                    filter_query["$or"] = [{field: {"$in": valid_tag_ids}} for field in TAG_FIELDS]
-            
-            # Difficulty filter
-            if difficulty:
-                diff_levels = [int(d.strip()) for d in difficulty.split(",") if d.strip().isdigit() and 1 <= int(d.strip()) <= 3]
-                if diff_levels:
-                    filter_query["difficulty"] = {"$in": diff_levels}
-            
-            
-            # Build aggregation pipeline
-            pipeline = []
-            if filter_query:
-                pipeline.append({"$match": filter_query})
-            pipeline.append({"$sample": {"size": needed_count}})
-            
-            new_recipes = await db[collection].aggregate(pipeline).to_list(needed_count)
-        
+            filter_query = build_recommendation_filter(
+                exclude_ids, min_score, min_votes, max_votes, has_image, tag_ids, difficulty
+            )
+
+            source_list = None
+            if sources:
+                source_list = [source.strip() for source in sources.split(",") if source.strip()]
+
+            new_recipes = await sample_recipes(db, filter_query, needed_count, source_list)
+
         # Combine locked and new recipes
         all_recommendations = locked_recipes + new_recipes
         
@@ -218,6 +314,20 @@ async def get_recipe_recommendations(
             return {"recommendations": []}
 
 
+@router.get("/sources", status_code=status.HTTP_200_OK)
+async def get_recipe_sources(db: AsyncIOMotorClient = Depends(get_db)) -> Dict[str, Any]:
+    """
+    List the sites recipes have been collected from.
+
+    Declared before the ``/{recipe_id}`` route so the path is not read as an id.
+
+    :param db: Database connection
+    :returns: Dictionary containing the sources, alphabetically
+    """
+    sources = [source for source in await db[collection].distinct("source") if source]
+    return {"sources": sorted(sources)}
+
+
 @router.get("/", status_code=status.HTTP_200_OK)
 async def get_recipes(
         db: AsyncIOMotorClient = Depends(get_db),
@@ -260,7 +370,12 @@ async def get_recipes(
     if search:
         query["title"] = {"$regex": search, "$options": "i"}
 
-    recipes = await db[collection].find(query).skip(skip).limit(page_size).sort(RATING_FIELD, -1).to_list(page_size)
+    # Large groups of recipes share one score exactly - tens of thousands of them carry
+    # the same star average and vote count - so the score alone leaves their order
+    # undefined and paging through such a group would repeat and skip recipes. The id
+    # breaks those ties into a stable total order.
+    sort_order = [(SCORE_FIELD, -1), ("_id", -1)]
+    recipes = await db[collection].find(query).skip(skip).limit(page_size).sort(sort_order).to_list(page_size)
     total = await db[collection].count_documents(query)
 
     # Store images for recipes that have image URLs but no stored images

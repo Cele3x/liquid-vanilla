@@ -5,6 +5,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-08-02
+
+### Added
+- **Recipes can be filtered by source**, so recommendations can be limited to one of the
+  sites recipes are collected from. New `GET /recipes/sources` endpoint lists them
+- **Recommendations are drawn evenly from every source** instead of in proportion to how
+  many recipes each site contributes, which kept the largest site from filling the page
+
+### Changed
+- **Recipe cards show the star average the site's own users gave.** Cards previously
+  showed the internal ranking value, so a well rated recipe could render two stars below
+  its actual rating. The ranking value is served separately as `score` and never displayed
+- **The quality filter selects by rank rather than by stars** - "Top 20%" instead of
+  "4.0★". Sites grade very differently, and a star threshold that is demanding on one site
+  passes almost everything on another; a rank threshold keeps the same share of each
+- **The vote filter covers the range every source reaches** (presets up to 50, previously
+  up to 2000). The old presets silently excluded whole sites, and vote weight is already
+  part of the ranking value
+- **BREAKING**: the recommendation parameter `min_rating` is now `min_score`, and its
+  default, like the vote filter's, no longer restricts anything
+- Saved filters are reset once, because the stored rating value no longer means stars
+
+### Fixed
+- **Recipes with a blank image could appear among recommendations** despite the
+  "only recipes with images" filter
+- **Paging through the recipe list could repeat and skip recipes** - tens of thousands of
+  recipes share one ranking value, leaving their order undefined between requests
+- Recipes created through the API no longer write a ranking value they have no data for
+
 ## [1.3.0] - 2026-08-01
 
 ### Added

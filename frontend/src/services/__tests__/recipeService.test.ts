@@ -46,11 +46,12 @@ describe('recipeService', () => {
 
       const lockedIds = ['locked1', 'locked2']
       const filters = {
-        minRating: 4.0,
-        minVotes: 100,
+        minScore: 4.0,
+        minVotes: 25,
         tagIds: ['6628c62d9b0fefc37a4de8d9', '6628c62d9b0fefc37a4de8da'],
         hasImage: true,
-        difficulty: [1, 2, 3]
+        difficulty: [1, 2, 3],
+        sources: ['chefkoch.de', 'kochbar.de']
       }
 
       await recipeService.getRecommendations(lockedIds, filters)
@@ -59,11 +60,12 @@ describe('recipeService', () => {
       expect(api.get).toHaveBeenCalledWith('/recipes/recommendations', {
         params: {
           locked_ids: 'locked1,locked2',
-          min_rating: 4.0,
-          min_votes: 100,
+          min_score: 4.0,
+          min_votes: 25,
           tag_ids: '6628c62d9b0fefc37a4de8d9,6628c62d9b0fefc37a4de8da',
           has_image: true,
-          difficulty: '1,2,3'
+          difficulty: '1,2,3',
+          sources: 'chefkoch.de,kochbar.de'
         }
       })
     })
@@ -73,8 +75,8 @@ describe('recipeService', () => {
       vi.mocked(api.get).mockResolvedValue(mockResponse)
 
       const filters = {
-        minRating: 4.0,
-        minVotes: 100,
+        minScore: 4.0,
+        minVotes: 25,
         tagIds: [], // Empty array
         hasImage: true
       }
@@ -84,12 +86,22 @@ describe('recipeService', () => {
       // Verify API was called without tag_ids parameter
       expect(api.get).toHaveBeenCalledWith('/recipes/recommendations', {
         params: {
-          min_rating: 4.0,
-          min_votes: 100,
+          min_score: 4.0,
+          min_votes: 25,
           has_image: true
           // tag_ids should not be present
         }
       })
+    })
+
+    it('should omit the sources parameter when no source is excluded', async () => {
+      const mockResponse = { data: { recommendations: [] } }
+      vi.mocked(api.get).mockResolvedValue(mockResponse)
+
+      await recipeService.getRecommendations([], { minScore: 3.5, sources: [] })
+
+      const [, config] = vi.mocked(api.get).mock.calls[0]
+      expect((config?.params as { sources?: string }).sources).toBeUndefined()
     })
 
     it('should handle single tag selection correctly', async () => {

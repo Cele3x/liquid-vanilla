@@ -247,6 +247,92 @@ class TestRecipeRecommendations:
             # Should still return up to 8 recommendations
             assert len(new_recommendations) <= 8
 
+    def test_recommendations_are_spread_over_the_sources(self, client, raw_db):
+        """A large source must not fill the page on its own."""
+        for index in range(40):
+            raw_db["recipes"].insert_one({
+                "title": f"Chefkoch Recipe {index}",
+                "source": "chefkoch.de",
+                "previewImageUrlTemplate": f"https://example.com/<format>/ck{index}.jpg",
+            })
+        for index in range(3):
+            raw_db["recipes"].insert_one({
+                "title": f"Kochbar Recipe {index}",
+                "source": "kochbar.de",
+                "previewImageUrlTemplate": f"https://example.com/<format>/kb{index}.jpg",
+            })
+
+        response = client.get(f"{RECIPE_URL}/recommendations")
+        assert response.status_code == 200
+
+        recommendations = response.json()["recommendations"]
+        assert len(recommendations) == 8
+
+        # The smaller source contributes everything it has, the larger one fills the rest
+        per_source = {}
+        for recipe in recommendations:
+            per_source[recipe["source"]] = per_source.get(recipe["source"], 0) + 1
+        assert per_source["kochbar.de"] == 3
+        assert per_source["chefkoch.de"] == 5
+
+    def test_recommendations_can_be_restricted_to_one_source(self, client, raw_db):
+        """The sources parameter keeps recipes of every other site out."""
+        for index in range(5):
+            raw_db["recipes"].insert_one({
+                "title": f"Chefkoch Recipe {index}",
+                "source": "chefkoch.de",
+                "previewImageUrlTemplate": f"https://example.com/<format>/ck{index}.jpg",
+            })
+            raw_db["recipes"].insert_one({
+                "title": f"Kochbar Recipe {index}",
+                "source": "kochbar.de",
+                "previewImageUrlTemplate": f"https://example.com/<format>/kb{index}.jpg",
+            })
+
+        response = client.get(f"{RECIPE_URL}/recommendations", params={"sources": "kochbar.de"})
+        assert response.status_code == 200
+
+        recommendations = response.json()["recommendations"]
+        assert len(recommendations) == 5
+        assert {recipe["source"] for recipe in recommendations} == {"kochbar.de"}
+
+    def test_recommendations_filter_on_the_normalized_score(self, client, raw_db):
+        """min_score selects on the stored score, not on the star average."""
+        for index in range(6):
+            raw_db["recipes"].insert_one({
+                "title": f"Scored Recipe {index}",
+                "source": "chefkoch.de",
+                "sourceRating": 5.0,  # A high star average must not carry a low score in
+                "rating": {"rating": float(index), "numVotes": 20},
+                "previewImageUrlTemplate": f"https://example.com/<format>/scored{index}.jpg",
+            })
+
+        response = client.get(f"{RECIPE_URL}/recommendations", params={"min_score": 4.0})
+        assert response.status_code == 200
+
+        recommendations = response.json()["recommendations"]
+        assert len(recommendations) == 2
+        assert all(recipe["score"] >= 4.0 for recipe in recommendations)
+
+    def test_recommendations_skip_blank_image_templates(self, client, raw_db):
+        """An empty image template is as good as no image at all."""
+        raw_db["recipes"].insert_one({
+            "title": "Blank Image Recipe",
+            "source": "chefkoch.de",
+            "previewImageUrlTemplate": "",
+        })
+        raw_db["recipes"].insert_one({
+            "title": "Real Image Recipe",
+            "source": "chefkoch.de",
+            "previewImageUrlTemplate": "https://example.com/<format>/real.jpg",
+        })
+
+        response = client.get(f"{RECIPE_URL}/recommendations")
+        assert response.status_code == 200
+
+        recommendations = response.json()["recommendations"]
+        assert [recipe["title"] for recipe in recommendations] == ["Real Image Recipe"]
+
     def test_get_recommendations_with_invalid_locked_ids(self, client, recipes_with_images):
         """Test recommendations with invalid locked IDs."""
         # Create recipes with images

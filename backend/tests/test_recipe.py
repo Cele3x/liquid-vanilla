@@ -111,7 +111,7 @@ class TestRecipe:
             assert len(result["recipes"]) >= 3
             assert all(isinstance(recipe, dict) for recipe in result['recipes'])
             expected_keys = {
-                "id", "title", "rating", "sourceUrl", "previewImageUrlTemplate",
+                "id", "title", "rating", "score", "sourceUrl", "previewImageUrlTemplate",
                 "cachedImagePath", "cachedImageUrl", "imageCachedAt",
                 "additionalDescription", "preparationTime", "restingTime", "source",
                 "sourceId", "status", "cookingTime", "servings", "sourceRating",
@@ -139,10 +139,11 @@ class TestRecipe:
             assert "cachedImageUrl" in recipe_data
             assert "imageCachedAt" in recipe_data
 
-        def test_get_recipes_flattens_embedded_rating(self, client, valid_recipe):
-            """Recipes stored with an embedded rating document are served as a plain float."""
-            recipe = {**valid_recipe, "title": "Embedded Rating Recipe", "rating": 4.25}
-            assert client.post(RECIPE_URL, json=recipe).status_code == 201
+        def test_get_recipes_serves_star_average_and_score_apart(self, client, raw_db, valid_recipe):
+            """The star average is served as the rating; the embedded score is served apart."""
+            stored = {**valid_recipe, "title": "Scored Recipe", "sourceRating": 4.25,
+                      "rating": {"rating": 1.5, "numVotes": 12}}
+            raw_db["recipes"].insert_one(stored)
 
             response = client.get(RECIPE_URL)
             assert response.status_code == 200
@@ -150,10 +151,25 @@ class TestRecipe:
             [served] = response.json()["recipes"]
             assert served["rating"] == 4.25
             assert isinstance(served["rating"], float)
+            assert served["score"] == 1.5
+
+        def test_get_recipes_serves_legacy_flat_rating(self, client, raw_db, valid_recipe):
+            """Documents predating the split keep rendering stars from their flat rating."""
+            stored = {key: value for key, value in valid_recipe.items() if key != "sourceRating"}
+            stored.update({"title": "Legacy Recipe", "rating": 3.75})
+            raw_db["recipes"].insert_one(stored)
+
+            response = client.get(RECIPE_URL)
+            assert response.status_code == 200
+
+            [served] = response.json()["recipes"]
+            assert served["rating"] == 3.75
+            assert served["score"] is None
 
         def test_get_recipes_without_rating_serves_null(self, client, valid_recipe):
             """Recipes lacking a rating are served with a null rating rather than an error."""
-            recipe = {key: value for key, value in valid_recipe.items() if key != "rating"}
+            recipe = {key: value for key, value in valid_recipe.items()
+                      if key not in ("rating", "sourceRating")}
             recipe["title"] = "Unrated Recipe"
             assert client.post(RECIPE_URL, json=recipe).status_code == 201
 
@@ -162,16 +178,32 @@ class TestRecipe:
 
             [served] = response.json()["recipes"]
             assert served["rating"] is None
+            assert served["score"] is None
 
-        def test_get_sorted_recipes_by_rating(self, client, valid_recipe):
-            """Test retrieving recipes sorted by its rating as default (highest to lowest)."""
+        def test_post_stores_rating_as_the_star_average(self, client, valid_recipe):
+            """A rating sent by a client is the star average, never the ordering score."""
+            recipe = {key: value for key, value in valid_recipe.items() if key != "sourceRating"}
+            recipe.update({"title": "Client Rated Recipe", "rating": 4.25})
+            assert client.post(RECIPE_URL, json=recipe).status_code == 201
+
+            response = client.get(RECIPE_URL)
+            assert response.status_code == 200
+
+            [served] = response.json()["recipes"]
+            assert served["rating"] == 4.25
+            assert served["sourceRating"] == 4.25
+            # The score belongs to the scraper's rating pipeline and stays unset.
+            assert served["score"] is None
+
+        def test_get_sorted_recipes_by_score(self, client, raw_db, valid_recipe):
+            """Test retrieving recipes sorted by their normalized score (highest to lowest)."""
             created_recipes = []
             for i in range(5):
                 recipe = valid_recipe.copy()
                 recipe["title"] = f"Test Recipe {i + 1}"
-                recipe["rating"] = random.uniform(0.0, 5.0)  # Get a random rating for each recipe
-                response = client.post(RECIPE_URL, json=recipe)
-                created_recipes.append(response.json())
+                recipe["rating"] = {"rating": random.uniform(0.0, 5.0), "numVotes": 10}
+                result = raw_db["recipes"].insert_one(recipe)
+                created_recipes.append(str(result.inserted_id))
 
             response = client.get(f"{RECIPE_URL}")
             assert response.status_code == 200
@@ -180,26 +212,43 @@ class TestRecipe:
             retrieved_recipes = result["recipes"]
             assert len(retrieved_recipes) == 5
 
-            # Check if the recipes are sorted by rating in descending order
+            # Check if the recipes are sorted by score in descending order
             for i in range(len(retrieved_recipes) - 1):
-                assert retrieved_recipes[i]['rating'] >= retrieved_recipes[i + 1]['rating']
+                assert retrieved_recipes[i]['score'] >= retrieved_recipes[i + 1]['score']
 
             # Verify that all created recipes are in the response
             created_ids = set(recipe_id for recipe_id in created_recipes)
             retrieved_ids = set(recipe['id'] for recipe in retrieved_recipes)
             assert created_ids == retrieved_ids
 
-            # Optional: Print the ratings to visualize the sorting
-            print("Ratings in order:", [recipe['rating'] for recipe in retrieved_recipes])
+        def test_recipes_sharing_a_score_paginate_without_repeating(self, client, raw_db,
+                                                                    valid_recipe):
+            """Recipes tied on the score keep a stable order across pages."""
+            for i in range(10):
+                recipe = valid_recipe.copy()
+                recipe["title"] = f"Tied Recipe {i + 1}"
+                recipe["rating"] = {"rating": 4.0, "numVotes": 5}
+                raw_db["recipes"].insert_one(recipe)
 
-        def test_get_recipes_with_pagination(self, client, valid_recipe):
+            first = client.get(f"{RECIPE_URL}?page=1&page_size=5")
+            second = client.get(f"{RECIPE_URL}?page=2&page_size=5")
+            assert first.status_code == 200
+            assert second.status_code == 200
+
+            first_ids = [recipe["id"] for recipe in first.json()["recipes"]]
+            second_ids = [recipe["id"] for recipe in second.json()["recipes"]]
+
+            # Every recipe appears exactly once across the two pages
+            assert len(set(first_ids) | set(second_ids)) == 10
+
+        def test_get_recipes_with_pagination(self, client, raw_db, valid_recipe):
             """Test retrieving recipes with pagination."""
-            # Create 25 recipes
+            # Create 25 recipes, seeded directly so they carry a score to sort on
             for i in range(25):
                 recipe = valid_recipe.copy()
                 recipe["title"] = f"Test Recipe {i + 1}"
-                recipe["rating"] = random.uniform(0.0, 5.0)
-                client.post(RECIPE_URL, json=recipe)
+                recipe["rating"] = {"rating": random.uniform(0.0, 5.0), "numVotes": 10}
+                raw_db["recipes"].insert_one(recipe)
 
             # Test first page
             response = client.get(f"{RECIPE_URL}?page=1&page_size=10")
@@ -239,7 +288,7 @@ class TestRecipe:
             data = response.json()
             recipes = data["recipes"]
             for i in range(len(recipes) - 1):
-                assert recipes[i]['rating'] >= recipes[i + 1]['rating']
+                assert recipes[i]['score'] >= recipes[i + 1]['score']
 
             # Test with default values
             response = client.get(f"{RECIPE_URL}")
