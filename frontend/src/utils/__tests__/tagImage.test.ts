@@ -15,12 +15,10 @@ describe('tagImageUrl', () => {
   })
 
   it('drops separators and punctuation', () => {
-    expect(tagImageUrl('Brot oder Brötchen')).toBe('/tag-images/brotoderbroetchen.webp')
-    expect(tagImageUrl('Eier oder Käse')).toBe('/tag-images/eieroderkaese.webp')
+    expect(tagImageUrl('Brot & Brötchen')).toBe('/tag-images/brotbroetchen.webp')
+    expect(tagImageUrl('Nudel- & Reissalat')).toBe('/tag-images/nudelreissalat.webp')
+    expect(tagImageUrl('Gewürze, Öl & Essig')).toBe('/tag-images/gewuerzeoelessig.webp')
     expect(tagImageUrl('Cross-Cooking')).toBe('/tag-images/crosscooking.webp')
-    expect(tagImageUrl('Raffiniert oder preiswert')).toBe(
-      '/tag-images/raffiniertoderpreiswert.webp'
-    )
   })
 
   it('keeps digits', () => {

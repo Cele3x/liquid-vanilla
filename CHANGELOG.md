@@ -11,8 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Tags can be excluded from recommendations**, not only required. Each tag in the
   filter search offers "Nur mit" and "Ohne", and a recipe carrying an excluded tag is
   never drawn. New `exclude_tag_ids` parameter on `GET /recipes/recommendations`
-- **Tag cards on the home page show an illustration** for around 180 tags. Tags without
-  one get a plain tinted panel
+- **Tag cards on the home page show an illustration.** Every tag currently in use has
+  one; a tag added later falls back to a plain tinted panel
 
 ### Changed
 - **BREAKING**: removed the recipe image storage system - the `/api/v1/images`
@@ -28,7 +28,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical Details
 - Tag images are matched to a tag by its normalized name and ship as WebP, which holds
-  the set to a third of the size the original JPEGs would have added
+  the set to a third of the size the original JPEGs would have added. Images for the
+  tags renamed by the tag cleanup were re-homed onto the new names
 - Dropped the `aiohttp` and `aiofiles` dependencies along with the image service
 
 ## [1.4.1] - 2026-08-08
