@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-08-08
+
+### Added
+- **Tags can be excluded from recommendations**, not only required. Each tag in the
+  filter search offers "Nur mit" and "Ohne", and a recipe carrying an excluded tag is
+  never drawn. New `exclude_tag_ids` parameter on `GET /recipes/recommendations`
+- **Tag cards on the home page show an illustration** for around 180 tags. Tags without
+  one get a plain tinted panel
+
+### Changed
+- **BREAKING**: removed the recipe image storage system - the `/api/v1/images`
+  endpoints, and the `cachedImagePath`, `cachedImageUrl` and `imageCachedAt` recipe
+  fields. The service wrote its results under different names than the API read back,
+  so no stored image was ever served; recipe images have always come from the source
+  site's own URL and continue to. Removing it also takes image downloads out of the
+  recipe list, detail, create and recommendation request paths
+
+### Fixed
+- **Home page tag images are no longer broken.** Every tag card pointed at
+  `via.placeholder.com`, a service that no longer resolves
+
+### Technical Details
+- Tag images are matched to a tag by its normalized name and ship as WebP, which holds
+  the set to a third of the size the original JPEGs would have added
+- Dropped the `aiohttp` and `aiofiles` dependencies along with the image service
+
 ## [1.4.1] - 2026-08-08
 
 ### Security
