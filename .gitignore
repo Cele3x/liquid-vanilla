@@ -298,6 +298,3 @@ cython_debug/
 
 # MongoDB playground files
 *.mongodb.js
-
-# Backend static assets (generated/downloaded images)
-backend/src/static/

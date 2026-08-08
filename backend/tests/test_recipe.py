@@ -112,7 +112,6 @@ class TestRecipe:
             assert all(isinstance(recipe, dict) for recipe in result['recipes'])
             expected_keys = {
                 "id", "title", "rating", "score", "sourceUrl", "previewImageUrlTemplate",
-                "cachedImagePath", "cachedImageUrl", "imageCachedAt",
                 "additionalDescription", "preparationTime", "restingTime", "source",
                 "sourceId", "status", "cookingTime", "servings", "sourceRating",
                 "subtitle", "createdAt", "sourceRatingVotes", "tagIds", "difficulty",
@@ -134,10 +133,6 @@ class TestRecipe:
             recipe_data = response.json()
             assert recipe_data["id"] == recipe_id
             assert recipe_data["title"] == valid_recipe["title"]
-            # Check that cached image fields are present
-            assert "cachedImagePath" in recipe_data
-            assert "cachedImageUrl" in recipe_data
-            assert "imageCachedAt" in recipe_data
 
         def test_get_recipes_serves_star_average_and_score_apart(self, client, raw_db, valid_recipe):
             """The star average is served as the rating; the embedded score is served apart."""
@@ -368,10 +363,6 @@ class TestRecipe:
             recipe_data = get_response.json()
             assert recipe_data["id"] == recipe_id
             assert recipe_data["title"] == "Updated Test Recipe"
-            # Check that cached image fields are present
-            assert "cachedImagePath" in recipe_data
-            assert "cachedImageUrl" in recipe_data
-            assert "imageCachedAt" in recipe_data
 
         def test_update_nonexistent_recipe(self, client, valid_recipe):
             """Test updating a nonexistent recipe."""

@@ -9,7 +9,7 @@ load_dotenv(dotenv_path=env_path)
 
 class Settings:
     PROJECT_NAME: str = "Rezept-API"
-    PROJECT_VERSION: str = "1.4.0"
+    PROJECT_VERSION: str = "1.5.0"
     PROJECT_DESCRIPTION: str = "Eine RESTful-API zur Verwaltung von Rezepten"
 
     BASE_URL: str = "/api/v1"
@@ -33,8 +33,6 @@ class Settings:
         MONGO_URL = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DATABASE}"
     else:
         MONGO_URL = f"mongodb://{MONGO_HOST}:{MONGO_PORT}/{MONGO_DATABASE}"
-
-    IMAGE_STORAGE_DIR: str = os.getenv("IMAGE_STORAGE_DIR", str(Path(__file__).parent / "static" / "images" / "recipes"))
 
 
 settings = Settings()

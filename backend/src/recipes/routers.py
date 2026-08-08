@@ -10,7 +10,6 @@ from .models import Recipe
 from .schemas import serialize_recipe, serialize_recipes
 from ..database import get_db
 from ..utils import convert_object_ids
-from ..images.service import image_storage_service
 
 
 router = APIRouter(
@@ -249,64 +248,20 @@ async def get_recipe_recommendations(
 
         # Combine locked and new recipes
         all_recommendations = locked_recipes + new_recipes
-        
-        # Store images for recipes that have image URLs but no stored images
-        for recipe in all_recommendations:
-            if (recipe.get("previewImageUrlTemplate") and 
-                not recipe.get("stored_image_url")):
-                try:
-                    recipe_id = str(recipe["_id"])
-                    image_data = await image_storage_service.store_image(
-                        recipe_id, recipe["previewImageUrlTemplate"]
-                    )
-                    
-                    # Update recipe with stored image info
-                    await db[collection].update_one(
-                        {"_id": ObjectId(recipe_id)},
-                        {"$set": image_data}
-                    )
-                    
-                    # Update the recipe dict with stored image info
-                    recipe.update(image_data)
-                except Exception as e:
-                    # Log error but don't fail recipe retrieval
-                    print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
-        
+
         return {
             "recommendations": serialize_recipes(all_recommendations)
         }
-        
+
     except Exception as e:
         print(f"Aggregation failed, using fallback: {str(e)}")
-        
+
         # Fallback - get first 8 recipes with images
         try:
             recommendations = await db[collection].find({
                 "previewImageUrlTemplate": {"$exists": True, "$nin": ["", None]}
             }).limit(8).to_list(8)
-            
-            # Store images for fallback recipes that have image URLs but no stored images
-            for recipe in recommendations:
-                if (recipe.get("previewImageUrlTemplate") and 
-                    not recipe.get("stored_image_url")):
-                    try:
-                        recipe_id = str(recipe["_id"])
-                        image_data = await image_storage_service.store_image(
-                            recipe_id, recipe["previewImageUrlTemplate"]
-                        )
-                        
-                        # Update recipe with stored image info
-                        await db[collection].update_one(
-                            {"_id": ObjectId(recipe_id)},
-                            {"$set": image_data}
-                        )
-                        
-                        # Update the recipe dict with stored image info
-                        recipe.update(image_data)
-                    except Exception as e:
-                        # Log error but don't fail recipe retrieval
-                        print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
-            
+
             return {
                 "recommendations": serialize_recipes(recommendations)
             }
@@ -378,28 +333,6 @@ async def get_recipes(
     recipes = await db[collection].find(query).skip(skip).limit(page_size).sort(sort_order).to_list(page_size)
     total = await db[collection].count_documents(query)
 
-    # Store images for recipes that have image URLs but no stored images
-    for recipe in recipes:
-        if (recipe.get("previewImageUrlTemplate") and 
-            not recipe.get("stored_image_url")):
-            try:
-                recipe_id = str(recipe["_id"])
-                image_data = await image_storage_service.store_image(
-                    recipe_id, recipe["previewImageUrlTemplate"]
-                )
-                
-                # Update recipe with stored image info
-                await db[collection].update_one(
-                    {"_id": ObjectId(recipe_id)},
-                    {"$set": image_data}
-                )
-                
-                # Update the recipe dict with stored image info
-                recipe.update(image_data)
-            except Exception as e:
-                # Log error but don't fail recipe retrieval
-                print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
-
     return {
         "recipes": serialize_recipes(recipes),
         "page": page,
@@ -416,7 +349,7 @@ async def create_recipe(
         db: AsyncIOMotorClient = Depends(get_db)
 ) -> str:
     """
-    Creates a new recipe with converted ObjectIds and caches images.
+    Creates a new recipe with converted ObjectIds.
 
     @param recipe: Recipe model to create
     @param db: Database connection
@@ -428,25 +361,7 @@ async def create_recipe(
         result = await db[collection].insert_one(converted_dict)
 
         if result.inserted_id:
-            recipe_id = str(result.inserted_id)
-            
-            # Store image permanently if image URL template exists
-            if recipe.previewImageUrlTemplate:
-                try:
-                    image_data = await image_storage_service.store_image(
-                        recipe_id, recipe.previewImageUrlTemplate
-                    )
-                    
-                    # Update recipe with stored image info
-                    await db[collection].update_one(
-                        {"_id": ObjectId(recipe_id)},
-                        {"$set": image_data}
-                    )
-                except Exception as e:
-                    # Log error but don't fail recipe creation
-                    print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
-            
-            return recipe_id
+            return str(result.inserted_id)
 
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -463,8 +378,8 @@ async def create_recipe(
 @router.get("/{recipe_id}", status_code=status.HTTP_200_OK)
 async def get_recipe(recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
     """
-    Get a single recipe by ID and cache its image if not already cached.
-    
+    Get a single recipe by ID.
+
     :param recipe_id: Recipe ID
     :param db: Database connection
     :returns: Serialized recipe data
@@ -473,27 +388,7 @@ async def get_recipe(recipe_id: str, db: AsyncIOMotorClient = Depends(get_db)):
     recipe = await db[collection].find_one({"_id": ObjectId(recipe_id)})
     if not recipe:
         raise HTTPException(status_code=404, detail="Rezept nicht gefunden")
-    
-    # Store image if it exists but isn't stored yet
-    if (recipe.get("previewImageUrlTemplate") and 
-        not recipe.get("stored_image_url")):
-        try:
-            image_data = await image_storage_service.store_image(
-                recipe_id, recipe["previewImageUrlTemplate"]
-            )
-            
-            # Update recipe with stored image info
-            await db[collection].update_one(
-                {"_id": ObjectId(recipe_id)},
-                {"$set": image_data}
-            )
-            
-            # Update the recipe dict with stored image info
-            recipe.update(image_data)
-        except Exception as e:
-            # Log error but don't fail recipe retrieval
-            print(f"Failed to store image for recipe {recipe_id}: {str(e)}")
-    
+
     return serialize_recipe(recipe)
 
 

@@ -9,7 +9,6 @@ interface Recipe {
   rating: number | null
   sourceRatingVotes: number
   previewImageUrlTemplate: string
-  cachedImageUrl?: string
   defaultImageUrl: string
   sourceUrl: string
   tagIds: string[]
@@ -41,11 +40,9 @@ export const useRecipeStore = defineStore('recipe', {
         const newRecipes = data.recipes.map((recipe: Recipe) => ({
           ...recipe,
           rating: normalizeRating(recipe.rating),
-          defaultImageUrl:
-            recipe.cachedImageUrl ||
-            (recipe.previewImageUrlTemplate
-              ? recipe.previewImageUrlTemplate.replace('<format>', 'crop-360x240')
-              : '')
+          defaultImageUrl: recipe.previewImageUrlTemplate
+            ? recipe.previewImageUrlTemplate.replace('<format>', 'crop-360x240')
+            : ''
         }))
         this.recipes.push(...newRecipes)
         this.page++

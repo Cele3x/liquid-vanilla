@@ -167,8 +167,7 @@ class TestRecipeRecommendations:
         if result["recommendations"]:
             recipe = result["recommendations"][0]
             expected_fields = {
-                "id", "title", "rating", "previewImageUrlTemplate",
-                "cachedImagePath", "cachedImageUrl", "imageCachedAt"
+                "id", "title", "rating", "previewImageUrlTemplate"
             }
             for field in expected_fields:
                 assert field in recipe

@@ -19,7 +19,6 @@ interface Recipe {
   rating: number | null
   sourceRatingVotes: number | null
   previewImageUrlTemplate: string | null
-  cachedImageUrl?: string | null
   sourceUrl: string
   tagIds: string[]
 }
@@ -256,7 +255,6 @@ onUnmounted(() => {
           <div class="relative overflow-hidden h-48 w-full">
             <img
               :src="
-                recipe.cachedImageUrl ||
                 recipe.previewImageUrlTemplate?.replace('<format>', 'crop-360x240') ||
                 placeholderImageDark
               "

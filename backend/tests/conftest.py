@@ -1,8 +1,7 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 from fastapi.testclient import TestClient
 import mongomock
-from datetime import datetime, UTC
 
 from src.main import app
 from src.database import get_db
@@ -117,28 +116,15 @@ def raw_db(client):
 
 
 @pytest.fixture
-def mock_image_storage_service():
-    """Mock image storage service for testing."""
-    mock_service = AsyncMock()
-    mock_service.store_image.return_value = {
-        "stored_image_path": "/test/path/image.jpg",
-        "stored_image_url": "/api/v1/images/test_image.jpg", 
-        "image_stored_at": datetime.now(UTC).isoformat()
-    }
-    return mock_service
-
-
-@pytest.fixture
-def client(mock_image_storage_service):
-    """Test client with mocked database and image service."""
+def client():
+    """Test client with mocked database."""
     global _test_db
     _test_db = None  # Reset database for each test
 
     app.dependency_overrides[get_db] = get_test_db
 
-    with patch('src.recipes.routers.image_storage_service', mock_image_storage_service):
-        with TestClient(app) as test_client:
-            yield test_client
-    
+    with TestClient(app) as test_client:
+        yield test_client
+
     app.dependency_overrides.clear()
     _test_db = None  # Clean up after test
