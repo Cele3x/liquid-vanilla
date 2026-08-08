@@ -1,4 +1,5 @@
 import api from './api'
+import type { RecommendationFilters } from '@/types/recommendations'
 
 interface GetRecipesParams {
   page?: number
@@ -30,19 +31,8 @@ export const recipeService = {
     return response.data
   },
 
-  async getRecommendations(
-    lockedIds?: string[],
-    filters?: {
-      minScore?: number
-      minVotes?: number
-      maxVotes?: number
-      hasImage?: boolean
-      tagIds?: string[]
-      difficulty?: number[]
-      sources?: string[]
-    }
-  ) {
-    const params: any = {}
+  async getRecommendations(lockedIds?: string[], filters?: Partial<RecommendationFilters>) {
+    const params: Record<string, string | number | boolean> = {}
 
     if (lockedIds && lockedIds.length > 0) {
       params.locked_ids = lockedIds.join(',')
@@ -51,7 +41,9 @@ export const recipeService = {
     if (filters) {
       if (filters.minScore !== undefined) params.min_score = filters.minScore
       if (filters.minVotes !== undefined) params.min_votes = filters.minVotes
-      if (filters.maxVotes !== undefined) params.max_votes = filters.maxVotes
+      // maxVotes is nullable: null means "no upper bound", so it is left off
+      if (filters.maxVotes !== undefined && filters.maxVotes !== null)
+        params.max_votes = filters.maxVotes
       if (filters.hasImage !== undefined) params.has_image = filters.hasImage
       if (filters.tagIds && filters.tagIds.length > 0) params.tag_ids = filters.tagIds.join(',')
       if (filters.difficulty && filters.difficulty.length > 0)

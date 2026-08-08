@@ -243,16 +243,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { tagService } from '@/services/tagService'
 import { recipeService } from '@/services/recipeService'
-
-interface RecommendationFilters {
-  minScore: number
-  minVotes: number
-  maxVotes: number | null
-  hasImage: boolean
-  tagIds: string[]
-  difficulty: number[]
-  sources: string[]
-}
+import type { RecommendationFilters } from '@/types/recommendations'
 
 const emit = defineEmits<{
   'filters-changed': [filters: RecommendationFilters]

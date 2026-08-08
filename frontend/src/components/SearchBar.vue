@@ -2,7 +2,7 @@
 import { onUnmounted, ref, watch } from 'vue'
 import { useRecipeStore } from '@/stores/recipeStore'
 
-const props = defineProps<{
+defineProps<{
   isVisible: boolean
 }>()
 

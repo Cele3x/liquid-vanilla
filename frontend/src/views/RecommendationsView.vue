@@ -3,6 +3,8 @@ import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { recipeService } from '@/services/recipeService'
 import placeholderImageDark from '@/assets/recipe-dark.png'
 import RecommendationFilters from '@/components/RecommendationFilters.vue'
+// Aliased: the component above already holds the RecommendationFilters name here
+import type { RecommendationFilters as Filters } from '@/types/recommendations'
 import { normalizeRating } from '@/utils/rating'
 import { useTagStore } from '@/stores/tagStore'
 
@@ -25,7 +27,7 @@ interface Recipe {
 const recommendations = ref<Recipe[]>([])
 const loading = ref(false)
 const lockedRecipeIds = ref<Set<string>>(new Set())
-const currentFilters = ref<any>(null)
+const currentFilters = ref<Filters | null>(null)
 
 // Pull-to-refresh variables
 const pullToRefresh = ref(false)
@@ -46,7 +48,10 @@ const fetchRecommendations = async () => {
 
   try {
     const lockedIds = Array.from(lockedRecipeIds.value)
-    const response = await recipeService.getRecommendations(lockedIds, currentFilters.value)
+    const response = await recipeService.getRecommendations(
+      lockedIds,
+      currentFilters.value ?? undefined
+    )
     recommendations.value = response.recommendations.map((recipe: Recipe) => ({
       ...recipe,
       rating: normalizeRating(recipe.rating)
@@ -60,7 +65,7 @@ const fetchRecommendations = async () => {
   }
 }
 
-const onFiltersChanged = (filters: any) => {
+const onFiltersChanged = (filters: Filters) => {
   currentFilters.value = filters
   // Auto-trigger recommendations load when filters change
   fetchRecommendations()
