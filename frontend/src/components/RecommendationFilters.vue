@@ -145,6 +145,7 @@
 
         <!-- Selected Tags (always visible) -->
         <div v-if="selectedTags.length > 0" class="mb-3">
+          <span class="block text-sm text-dark dark:text-light mb-1">Enthalten</span>
           <div class="flex flex-wrap gap-1">
             <button
               v-for="tag in selectedTags"
@@ -154,6 +155,34 @@
             >
               {{ tag.name }}
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Excluded Tags (always visible) -->
+        <div v-if="excludedTags.length > 0" class="mb-3">
+          <span class="block text-sm text-dark dark:text-light mb-1">Ausgeschlossen</span>
+          <div class="flex flex-wrap gap-1">
+            <button
+              v-for="tag in excludedTags"
+              :key="tag.id"
+              @click="removeExcludedTag(tag.id)"
+              class="inline-flex items-center gap-1 px-2 py-1 text-sm line-through border border-dark dark:border-light text-dark dark:text-light hover:bg-light dark:hover:bg-accent transition-colors cursor-pointer"
+            >
+              {{ tag.name }}
+              <svg
+                class="w-3 h-3 no-underline"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -177,21 +206,29 @@
 
         <!-- Search Results (only when searching) -->
         <div v-if="searchTags" class="max-h-32 overflow-y-auto space-y-1">
-          <button
+          <div
             v-for="tag in searchResults"
             :key="tag.id"
-            @click="addTag(tag.id)"
-            class="flex items-center gap-2 w-full p-1 hover:bg-light dark:hover:bg-accent cursor-pointer transition-colors text-left"
-            :class="{ 'opacity-50': filters.tagIds.includes(tag.id) }"
-            :disabled="filters.tagIds.includes(tag.id)"
+            class="flex items-center gap-2 w-full p-1 hover:bg-light dark:hover:bg-accent transition-colors"
           >
-            <span class="text-sm text-dark dark:text-light">{{ tag.name }}</span>
-            <span
-              v-if="filters.tagIds.includes(tag.id)"
-              class="text-sm text-gold-light dark:text-gold"
-              >(selected)</span
+            <span class="text-sm text-dark dark:text-light flex-1 text-left">{{ tag.name }}</span>
+            <button
+              @click="addTag(tag.id)"
+              class="px-2 py-0.5 text-sm border border-gold-light dark:border-gold text-gold-light dark:text-gold hover:bg-gold-light dark:hover:bg-gold hover:text-white transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
+              :disabled="filters.tagIds.includes(tag.id)"
+              :title="`${tag.name} verlangen`"
             >
-          </button>
+              Nur mit
+            </button>
+            <button
+              @click="excludeTag(tag.id)"
+              class="px-2 py-0.5 text-sm border border-dark dark:border-light text-dark dark:text-light hover:bg-dark dark:hover:bg-light hover:text-light dark:hover:text-dark transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"
+              :disabled="filters.excludeTagIds.includes(tag.id)"
+              :title="`${tag.name} ausschließen`"
+            >
+              Ohne
+            </button>
+          </div>
           <div v-if="searchResults.length === 0" class="p-2 text-sm text-gold-light dark:text-gold">
             Keine Tags gefunden für "{{ searchTags }}"
           </div>
@@ -262,6 +299,7 @@ const defaultFilters: RecommendationFilters = {
   maxVotes: null,
   hasImage: true, // Only recipes with images by default
   tagIds: [],
+  excludeTagIds: [],
   difficulty: [1, 2, 3], // All difficulties allowed by default
   sources: [] // Empty means every source
 }
@@ -310,6 +348,11 @@ const selectedTags = computed(() => {
   return availableTags.value.filter((tag) => filters.value.tagIds.includes(tag.id))
 })
 
+const excludedTags = computed(() => {
+  if (!availableTags.value || !filters.value.excludeTagIds) return []
+  return availableTags.value.filter((tag) => filters.value.excludeTagIds.includes(tag.id))
+})
+
 const searchResults = computed(() => {
   if (!searchTags.value || !availableTags.value) {
     return []
@@ -344,6 +387,11 @@ const activeFiltersCount = computed(() => {
 
   // Check if tags are selected
   if (filters.value.tagIds.length > 0) {
+    count++
+  }
+
+  // Check if tags are excluded
+  if (filters.value.excludeTagIds.length > 0) {
     count++
   }
 
@@ -391,7 +439,16 @@ const toggleDifficulty = (level: number) => {
   filters.value.difficulty.sort()
 }
 
+/**
+ * Require a tag, dropping any exclusion of it.
+ *
+ * A tag held on both lists would ask for recipes that carry it and do not, which
+ * matches nothing, so the two selections are kept mutually exclusive.
+ *
+ * @param tagId - Tag to require
+ */
 const addTag = (tagId: string) => {
+  removeExcludedTag(tagId)
   if (!filters.value.tagIds.includes(tagId)) {
     filters.value.tagIds.push(tagId)
   }
@@ -406,11 +463,33 @@ const removeTag = (tagId: string) => {
   }
 }
 
+/**
+ * Rule a tag out, dropping any requirement of it.
+ *
+ * @param tagId - Tag no recommendation may carry
+ */
+const excludeTag = (tagId: string) => {
+  removeTag(tagId)
+  if (!filters.value.excludeTagIds.includes(tagId)) {
+    filters.value.excludeTagIds.push(tagId)
+  }
+  // Clear search after adding
+  searchTags.value = ''
+}
+
+const removeExcludedTag = (tagId: string) => {
+  const index = filters.value.excludeTagIds.indexOf(tagId)
+  if (index > -1) {
+    filters.value.excludeTagIds.splice(index, 1)
+  }
+}
+
 const resetFilters = () => {
   filters.value = {
     ...defaultFilters,
     difficulty: [...defaultFilters.difficulty], // Create a new array copy
     tagIds: [...defaultFilters.tagIds], // Also copy tagIds array
+    excludeTagIds: [...defaultFilters.excludeTagIds],
     sources: [...defaultFilters.sources]
   }
   applyFilters()

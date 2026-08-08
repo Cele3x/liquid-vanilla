@@ -63,6 +63,25 @@ def prepare_recipe_document(recipe: Recipe) -> Dict[str, Any]:
     return recipe_dict
 
 
+def parse_tag_ids(tag_ids: Optional[str]) -> List[ObjectId]:
+    """
+    Turn a comma-separated list of tag ids into ObjectIds.
+
+    Ids that are not valid ObjectIds are dropped rather than raised on: the value comes
+    from a saved filter that may outlive the tag it names, and rejecting the whole
+    request would leave the user unable to load recommendations at all.
+
+    :param tag_ids: Comma-separated tag ids, or None
+    :returns: The ids that parsed, in the order given
+    """
+    if not tag_ids:
+        return []
+    return [
+        ObjectId(tag_id) for tag_id in (part.strip() for part in tag_ids.split(","))
+        if tag_id and ObjectId.is_valid(tag_id)
+    ]
+
+
 def build_recommendation_filter(
         exclude_ids: List[ObjectId],
         min_score: Optional[float],
@@ -71,6 +90,7 @@ def build_recommendation_filter(
         has_image: Optional[bool],
         tag_ids: Optional[str],
         difficulty: Optional[str],
+        exclude_tag_ids: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Build the MongoDB filter selecting the recipes a recommendation may be drawn from.
@@ -82,6 +102,7 @@ def build_recommendation_filter(
     :param has_image: Only include recipes carrying a preview image
     :param tag_ids: Comma-separated list of tag IDs to filter by
     :param difficulty: Comma-separated difficulty levels (1,2,3)
+    :param exclude_tag_ids: Comma-separated list of tag IDs no recipe may carry
     :returns: Filter document, empty when nothing was restricted
     """
     filter_query: Dict[str, Any] = {}
@@ -107,11 +128,16 @@ def build_recommendation_filter(
     if has_image:
         filter_query["previewImageUrlTemplate"] = {"$exists": True, "$nin": ["", None]}
 
-    if tag_ids:
-        tag_id_list = [tag_id.strip() for tag_id in tag_ids.split(",") if tag_id.strip()]
-        valid_tag_ids = [ObjectId(tag_id) for tag_id in tag_id_list if ObjectId.is_valid(tag_id)]
-        if valid_tag_ids:
-            filter_query["$or"] = [{field: {"$in": valid_tag_ids}} for field in TAG_FIELDS]
+    included_tags = parse_tag_ids(tag_ids)
+    if included_tags:
+        filter_query["$or"] = [{field: {"$in": included_tags}} for field in TAG_FIELDS]
+
+    # "$nor" holds where "$or" cannot: inclusion already owns the "$or" key, and the two
+    # sit side by side as separate top-level keys that must both hold. A recipe carrying
+    # an excluded tag in either tag field fails every branch and drops out.
+    excluded_tags = parse_tag_ids(exclude_tag_ids)
+    if excluded_tags:
+        filter_query["$nor"] = [{field: {"$in": excluded_tags}} for field in TAG_FIELDS]
 
     if difficulty:
         diff_levels = [
@@ -190,6 +216,9 @@ async def get_recipe_recommendations(
         max_votes: Optional[int] = Query(None, description="Maximum number of votes", ge=0),
         has_image: Optional[bool] = Query(True, description="Only recipes with images"),
         tag_ids: Optional[str] = Query(None, description="Comma-separated list of tag IDs"),
+        exclude_tag_ids: Optional[str] = Query(
+            None, description="Comma-separated list of tag IDs no recipe may carry"
+        ),
         difficulty: Optional[str] = Query(None, description="Comma-separated difficulty levels (1,2,3)"),
         sources: Optional[str] = Query(None, description="Comma-separated list of sources"),
 ) -> Dict[str, Any]:
@@ -207,6 +236,7 @@ async def get_recipe_recommendations(
     :param max_votes: Maximum number of votes
     :param has_image: Only include recipes with images (default: True)
     :param tag_ids: Comma-separated list of tag IDs to filter by
+    :param exclude_tag_ids: Comma-separated list of tag IDs no recipe may carry
     :param difficulty: Comma-separated difficulty levels (1,2,3)
     :param sources: Comma-separated list of sources to draw from (default: all sources)
     :returns: Dictionary containing filtered recommended recipes
@@ -237,7 +267,8 @@ async def get_recipe_recommendations(
         if needed_count > 0:
             exclude_ids = [ObjectId(id) for id in locked_recipe_ids if ObjectId.is_valid(id)]
             filter_query = build_recommendation_filter(
-                exclude_ids, min_score, min_votes, max_votes, has_image, tag_ids, difficulty
+                exclude_ids, min_score, min_votes, max_votes, has_image, tag_ids, difficulty,
+                exclude_tag_ids
             )
 
             source_list = None

@@ -46,6 +46,8 @@ export const recipeService = {
         params.max_votes = filters.maxVotes
       if (filters.hasImage !== undefined) params.has_image = filters.hasImage
       if (filters.tagIds && filters.tagIds.length > 0) params.tag_ids = filters.tagIds.join(',')
+      if (filters.excludeTagIds && filters.excludeTagIds.length > 0)
+        params.exclude_tag_ids = filters.excludeTagIds.join(',')
       if (filters.difficulty && filters.difficulty.length > 0)
         params.difficulty = filters.difficulty.join(',')
       if (filters.sources && filters.sources.length > 0) params.sources = filters.sources.join(',')

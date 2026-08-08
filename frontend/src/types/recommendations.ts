@@ -10,6 +10,7 @@ export interface RecommendationFilters {
   maxVotes: number | null
   hasImage: boolean
   tagIds: string[]
+  excludeTagIds: string[]
   difficulty: number[]
   sources: string[]
 }

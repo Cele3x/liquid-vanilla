@@ -4,6 +4,8 @@ Tests for recipe recommendations endpoint.
 :module: tests.test_recipe_recommendations
 """
 import pytest
+from bson import ObjectId
+
 from src.config import settings
 
 RECIPE_URL = f"{settings.BASE_URL}/recipes"
@@ -331,6 +333,72 @@ class TestRecipeRecommendations:
 
         recommendations = response.json()["recommendations"]
         assert [recipe["title"] for recipe in recommendations] == ["Real Image Recipe"]
+
+    def test_recommendations_drop_recipes_carrying_an_excluded_tag(self, client, raw_db):
+        """exclude_tag_ids removes a recipe whichever tag field the tag sits in."""
+        dessert = ObjectId()
+        vegan = ObjectId()
+        for title, field, tags in [
+            ("Tagged Dessert", "tags", [dessert]),
+            ("Legacy Dessert", "tagIds", [dessert]),
+            ("Vegan Dish", "tags", [vegan]),
+            ("Untagged Dish", "tags", []),
+        ]:
+            raw_db["recipes"].insert_one({
+                "title": title,
+                "source": "chefkoch.de",
+                "previewImageUrlTemplate": f"https://example.com/<format>/{title}.jpg",
+                field: tags,
+            })
+
+        response = client.get(
+            f"{RECIPE_URL}/recommendations", params={"exclude_tag_ids": str(dessert)}
+        )
+        assert response.status_code == 200
+
+        titles = {recipe["title"] for recipe in response.json()["recommendations"]}
+        assert titles == {"Vegan Dish", "Untagged Dish"}
+
+    def test_recommendations_combine_included_and_excluded_tags(self, client, raw_db):
+        """A recipe must carry an included tag and none of the excluded ones."""
+        main = ObjectId()
+        dessert = ObjectId()
+        for title, tags in [
+            ("Main Only", [main]),
+            ("Main And Dessert", [main, dessert]),
+            ("Dessert Only", [dessert]),
+        ]:
+            raw_db["recipes"].insert_one({
+                "title": title,
+                "source": "chefkoch.de",
+                "previewImageUrlTemplate": f"https://example.com/<format>/{title}.jpg",
+                "tags": tags,
+            })
+
+        response = client.get(f"{RECIPE_URL}/recommendations", params={
+            "tag_ids": str(main),
+            "exclude_tag_ids": str(dessert),
+        })
+        assert response.status_code == 200
+
+        titles = [recipe["title"] for recipe in response.json()["recommendations"]]
+        assert titles == ["Main Only"]
+
+    def test_recommendations_ignore_unparsable_excluded_tag_ids(self, client, raw_db):
+        """A saved filter naming a malformed id must not fail the whole request."""
+        raw_db["recipes"].insert_one({
+            "title": "Any Recipe",
+            "source": "chefkoch.de",
+            "previewImageUrlTemplate": "https://example.com/<format>/any.jpg",
+        })
+
+        response = client.get(
+            f"{RECIPE_URL}/recommendations", params={"exclude_tag_ids": "not-an-object-id,,  "}
+        )
+        assert response.status_code == 200
+
+        titles = [recipe["title"] for recipe in response.json()["recommendations"]]
+        assert titles == ["Any Recipe"]
 
     def test_get_recommendations_with_invalid_locked_ids(self, client, recipes_with_images):
         """Test recommendations with invalid locked IDs."""

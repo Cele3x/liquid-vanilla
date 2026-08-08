@@ -121,5 +121,32 @@ describe('recipeService', () => {
         }
       })
     })
+
+    it('should send excluded tags as exclude_tag_ids', async () => {
+      const mockResponse = { data: { recommendations: [] } }
+      vi.mocked(api.get).mockResolvedValue(mockResponse)
+
+      await recipeService.getRecommendations([], {
+        tagIds: ['6628c62d9b0fefc37a4de8d9'],
+        excludeTagIds: ['6628c62d9b0fefc37a4de8db', '6628c62d9b0fefc37a4de8dc']
+      })
+
+      expect(api.get).toHaveBeenCalledWith('/recipes/recommendations', {
+        params: {
+          tag_ids: '6628c62d9b0fefc37a4de8d9',
+          exclude_tag_ids: '6628c62d9b0fefc37a4de8db,6628c62d9b0fefc37a4de8dc'
+        }
+      })
+    })
+
+    it('should omit exclude_tag_ids when no tag is excluded', async () => {
+      const mockResponse = { data: { recommendations: [] } }
+      vi.mocked(api.get).mockResolvedValue(mockResponse)
+
+      await recipeService.getRecommendations([], { minScore: 3.5, excludeTagIds: [] })
+
+      const [, config] = vi.mocked(api.get).mock.calls[0]
+      expect((config?.params as { exclude_tag_ids?: string }).exclude_tag_ids).toBeUndefined()
+    })
   })
 })
