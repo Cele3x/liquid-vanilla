@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useRecipeStore } from '@/stores/recipeStore'
 import { useTagStore } from '@/stores/tagStore'
 import { useCategoryStore } from '@/stores/categoryStore'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { formatNumber } from '@/utils/numberFormatter'
+import { tagImageUrl } from '@/utils/tagImage'
 
 const recipeStore = useRecipeStore()
 const tagStore = useTagStore()
@@ -57,6 +58,20 @@ const handleTagClick = (tagId: string) => {
   recipeStore.setTagFilter([tagId])
   router.push('/recipes')
 }
+
+// Tags whose image file turned out to be missing. Only part of the tag vocabulary was
+// given an illustration, and a tag added since has none at all, so the card falls back
+// to a plain tinted panel rather than leaving a broken image icon. A shared placeholder
+// image would be worse: the only one in the assets weighs more than every tag image put
+// together, for a thumbnail 96px tall.
+const tagsWithoutImage = ref<Set<string>>(new Set())
+
+const tagImage = (tag: { id: string; name: string }): string | null =>
+  tagsWithoutImage.value.has(tag.id) ? null : tagImageUrl(tag.name)
+
+const handleImageError = (tagId: string) => {
+  tagsWithoutImage.value = new Set(tagsWithoutImage.value).add(tagId)
+}
 </script>
 
 <template>
@@ -85,10 +100,14 @@ const handleTagClick = (tagId: string) => {
               @click="handleTagClick(tag.id)"
             >
               <img
-                src="https://via.placeholder.com/150"
+                v-if="tagImage(tag)"
+                :src="tagImage(tag)!"
                 :alt="tag.name"
+                loading="lazy"
                 class="w-full h-24 object-cover mb-2"
+                @error="handleImageError(tag.id)"
               />
+              <div v-else class="w-full h-24 mb-2 bg-secondary-light dark:bg-primary"></div>
               <p class="text-center text-sm font-medium text-dark dark:text-light">
                 {{ tag.name }}
               </p>
